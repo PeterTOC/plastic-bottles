@@ -7,7 +7,7 @@ Regularly-collected data about single-use plastic bottle waste found in public s
 
 
 some commonly occuring labels in the dataset:
-[image](https://github.com/PeterTOC/plastic-bottles/blob/master/docs/pollutants.png)
+![image](https://github.com/PeterTOC/plastic-bottles/blob/master/docs/pollutants.png)
 
 
 
