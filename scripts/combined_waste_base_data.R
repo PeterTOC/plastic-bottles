@@ -12,6 +12,7 @@ library(glue)
  # input
 files_raw <- list.files(here::here("data-raw"), "*F.csv")
 paths <- map_chr(files_raw, ~ glue("data-raw/", .x))
+# HACK on reading multiple files with the same naming convention
 
  # output
 
