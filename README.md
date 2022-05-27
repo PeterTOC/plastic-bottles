@@ -5,6 +5,7 @@ The data was collected by [Wastebase's Data Partner](https://www.unwaste.io/part
 ### Context
 Regularly-collected data about single-use plastic bottle waste found in public spaces, identified to the level of individual commercial products.
 
+Report coming soon ...
 
 some commonly occuring labels in the dataset:
 ![image](https://github.com/PeterTOC/plastic-bottles/blob/master/docs/pollutants.png)
