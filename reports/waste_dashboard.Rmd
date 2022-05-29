@@ -1,0 +1,111 @@
+---
+title: "Untitled"
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: columns
+    vertical_layout: fill
+---
+
+```{r setup, include=FALSE}
+# Packages
+library(tidyverse)
+library(flexdashboard)
+
+# Parameters
+  #input
+file_raw <- here::here("data/clean_waste_base_data.rds")
+
+# theme update
+
+theme_set(theme_classic())
+
+# read data 
+df <- read_rds(file_raw)
+
+```
+
+Column {data-width=650}
+-----------------------------------------------------------------------
+
+### brand name distribution and scan country
+
+```{r}
+df |> 
+  group_by(brand_name, scan_country) |> 
+  summarise(total = sum(bottle_count)) |> 
+  group_by(scan_country) |> 
+  slice_max(order_by = total,n = 5) |> 
+  arrange(total) |>
+  # fct_reorder(df$brand_name,total, min, .desc = TRUE)
+  # na.omit() |> 
+  ggplot(aes(total, fct_inorder(droplevels(brand_name)))) +
+  geom_col() +
+  facet_wrap( ~ scan_country, scales = "free")
+
+```
+
+Column {data-width=350}
+-----------------------------------------------------------------------
+
+### batch amount progression
+
+```{r}
+df |> 
+  group_by(batch) |> 
+  summarise(total_bottles = sum(bottle_count)) |> 
+  ggplot(aes(batch,total_bottles)) +
+  geom_col() +
+  geom_line(aes(group = 1)) +
+  geom_point() 
+  # geom_label(aes(label = total_bottles))
+
+
+```
+
+
+
+### product category distribution
+
+```{r}
+df |> 
+  group_by(product_category) |> 
+  summarise(total = sum(bottle_count)) |> 
+  arrange(total) |> 
+  ggplot(aes(fct_inorder(product_category), total)) +
+  geom_col() +
+  coord_flip()
+
+```
+
+### storage quantity distribution
+
+```{r}
+df |> 
+  filter(units == "ml") |>
+  mutate(amount = round(amount),
+         amount_category = fct_inorder(case_when(
+           amount < 500 ~ "less than 500",
+           amount >= 500 & amount < 1000 ~ "500-1000",
+           amount >= 1000 & amount < 2000 ~ "1000-2000",
+           amount >= 2000 & amount < 5000 ~ "2000-5000",
+           TRUE ~ "greater than 5000"
+           ))
+  ) |> 
+  mutate(amount_category = fct_relevel(amount_category, "greater than 5000", after = 4)) |> # HACK releveling default levels
+  count(amount_category) |> 
+  ggplot(aes(n, fct_rev(amount_category))) + # HACK flipping your levels with forcats
+  geom_col()
+```
+
+### scan country distribution
+
+```{r}
+df |> 
+  group_by(scan_country) |> 
+  summarise(total = sum(bottle_count)) |> 
+  arrange(total) |> 
+  ggplot(aes(total, fct_inorder(scan_country))) + 
+  geom_col() +
+  geom_label(aes(label = total))
+```
+

@@ -24,7 +24,7 @@ unit_pattern <- "\\D+$"
 water_pattern <- "water|agua|aqua|água|mineral|maji|drop of zanzibar|ice drop|eau de source|amaryllis"
 carbonated_pattern <- "twist|vimto gas[ei]ficado|afiya|chungwa|malto|malt flavoured|fursana berry|soft  drink|azam passion|apple malt|apple punch|pepsi|fanta|tonic|fiesta|coke|cola|sparletta|sprite|soda|novida|fizz|kombucha|coca|carbonated|morango soft drink"
 juice_pattern <- "juice|fruit drink|orange drink|tropika drink|quencher|blend concentrate|de fruta|tropika drink fruta tropical|delight\\.? mango|tunda|summer fruits|frooty|mala drink|jembe|fruticana|refresco abacaxi|baobab fruit drink|minute maid|dairy fruit blend|ukwaju|sobo drink|agashya|flavou?red drink"
-domestic_pattern <- "cleaner|dish|body wash|brake|ice cream|sanitiser|belair|skin|engine oil|perfume|oleo ouro|oleo puro|lubricant|mouthwash|relaxer|sunlight liquid|hygienix|glue|handwash|cleanse|bleach|detergent|shower|lotion|soap|hand gel|wash|oleo refinado"
+domestic_pattern <- "cleaner|dish|body wash|brake|ice cream|saniti[zs]er|belair|skin|engine oil|perfume|oleo ouro|oleo puro|lubricant|mouthwash|relaxer|sunlight liquid|hygienix|glue|handwash|cleanse|bleach|detergent|shower|lotion|soap|hand gel|wash|oleo refinado"
 food_pattern <- "seasoning|shake \\'n|snack|mayonnaise|jam|mchuzi mix|farm fresh|soya oil|red gold|maize|vegetable oil|oleo vegetal|oleo alimentar|tomato sauce|food|butter|margarin?e|maziwa|milk|chocolate|salt|yoghurt|vinegar|seed oil|coconut oil|cooking|sunflower oil|óleo de soja refinado"
 hard_liquor_pattern <- "whisky|brandy|fortified wine|alcoholic|gin$|smart gi|k-vant|premium spirit"
 beer_pattern <- "beer|castle|heineken|redd's|lager|savanna|chibuku"
@@ -52,6 +52,7 @@ categorized_df <- combined_df |>
          scan_country,
          bottle_count) |>
   mutate_if(is.character,str_to_lower) |>
+  # TODO remove the special characters like dashes inbetween words
   mutate(batch = fct_inorder(batch)) |>
   mutate(product_category = case_when(
     str_detect(product_label, water_pattern) ~ "water",
@@ -86,6 +87,8 @@ categorized_df <- combined_df |>
   mutate(amount = case_when(
       units == "l" ~ product_size_extracted * 1000,
       units == "kg" ~ product_size_extracted * 1000,
+# REVIEW the amount parsing has a lot of diet supplements allocated as ml instead of grams
+# REVIEW the amount parsing has a lot of water items of 8 litres left as they are
       TRUE ~ product_size_extracted
     )) |>
   mutate(units = case_when(
@@ -149,6 +152,7 @@ categorized_df |>
            c("year","month")) |>
    mutate(year = as.factor(year),
           month = as.factor(month),
+          batch = as.factor(batch),
           units = as.factor(units),
           manufacturer_country = as.factor(manufacturer_country),
           scan_country = as.factor(scan_country),

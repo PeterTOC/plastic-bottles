@@ -1,0 +1,227 @@
+---
+title: "Waste data exploration"
+author: "Your Name"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output:
+  html_document:
+    toc: true
+    fig_caption: true
+    theme: flatly
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(fig.align = 'center', collapse = TRUE, echo = FALSE, message = FALSE)
+```
+
+
+```{r}
+# Packages
+library(tidyverse)
+
+# Parameters
+  #input
+file_raw <- here::here("data/clean_waste_base_data.rds")
+
+# theme update
+
+theme_set(theme_classic())
+
+```
+
+
+Lets explore our data
+
+```{r}
+df <- read_rds(file_raw)
+
+
+
+df |> 
+  glimpse()
+```
+
+
+- batch amount progression
+```{r}
+df |> 
+  group_by(batch) |> 
+  summarise(total_bottles = sum(bottle_count)) |> 
+  ggplot(aes(batch,total_bottles)) +
+  geom_col() +
+  geom_line(aes(group = 1)) +
+  geom_point() 
+  # geom_label(aes(label = total_bottles))
+
+
+
+```
+
+
+
+- product category distribution
+
+```{r}
+df |> 
+  group_by(product_category) |> 
+  summarise(total = sum(bottle_count)) |> 
+  arrange(total) |> 
+  ggplot(aes(fct_inorder(product_category), total)) +
+  geom_col() +
+  coord_flip()
+
+
+df |> 
+  group_by(batch) |> 
+  summarise(total_bottles = sum(bottle_count)) |> 
+  ggplot(aes(batch,total_bottles)) +
+  geom_col() +
+  geom_line(aes(group = 1)) +
+  geom_point() 
+```
+
+- product label distribution
+
+```{r}
+df |> 
+  mutate(product_label = as_factor(product_label)) |> 
+  group_by(product_label,brand_name) |> 
+  summarise(total = sum(bottle_count)) |>
+  arrange(desc(total)) |> #view()
+  filter(total > 5000) |> 
+  ggplot(aes(droplevels(product_label), total, group = brand_name)) + 
+  geom_col() +
+  coord_flip() +
+  theme(
+    axis.text.x = element_text(angle = 90)
+  )
+
+# REVIEW figure out why you cant order the caategories correctly
+  
+```
+
+
+- units distribution
+
+```{r}
+df |> 
+  count(units) |> 
+  ggplot(aes(units, n)) + 
+  geom_col()
+```
+
+- scan country distribution
+
+```{r}
+df |> 
+  group_by(scan_country) |> 
+  summarise(total = sum(bottle_count)) |> 
+  arrange(total) |> 
+  ggplot(aes(total, fct_inorder(scan_country))) + 
+  geom_col() +
+  geom_label(aes(label = total))
+```
+
+
+
+- manufacturer country distribution
+
+```{r}
+df |> 
+  group_by(manufacturer_country) |> 
+  summarise(total = sum(bottle_count)) |> 
+  slice_max(order_by = total, prop = .2) |> 
+  arrange(total) |> 
+  ggplot(aes(total, fct_inorder(droplevels(manufacturer_country)))) + 
+  geom_col() +
+  geom_label(aes(label = total))
+
+# HACK great way to slice and reorder
+# REVIEW to checkways to summarize the slice better
+
+```
+
+
+
+- brand name distribution
+
+```{r}
+df |> 
+  group_by(brand_name, scan_country) |> 
+  summarise(total = sum(bottle_count)) |> 
+  group_by(scan_country) |> 
+  slice_max(order_by = total,n = 5) |> 
+  arrange(total) |>
+  # fct_reorder(df$brand_name,total, min, .desc = TRUE)
+  # na.omit() |> 
+  ggplot(aes(total, fct_inorder(droplevels(brand_name)))) +
+  geom_col() +
+  facet_wrap( ~ scan_country, scales = "free")
+
+```
+
+
+
+- year and month distribution
+
+
+```{r}
+df |> 
+  group_by(year, month, product_category) |> 
+  summarise(total_bottles = sum(bottle_count)) |> 
+  ggplot(aes(month,total_bottles, fill = product_category)) +
+  geom_col(col = "white") +
+  facet_wrap( ~ year)
+
+
+df |> 
+  group_by(year, month, product_category) |> 
+  summarise(total_bottles = sum(bottle_count)) |> 
+  ggplot(aes(month,total_bottles)) +
+  geom_boxplot() +
+  facet_wrap( ~ year)
+
+
+```
+
+- distribution of amounts
+
+```{r}
+df |> 
+  filter(units == "ml") |>
+  mutate(amount = round(amount),
+         amount_category = fct_inorder(case_when(
+           amount < 500 ~ "less than 500",
+           amount >= 500 & amount < 1000 ~ "500-1000",
+           amount >= 1000 & amount < 2000 ~ "1000-2000",
+           amount >= 2000 & amount < 5000 ~ "2000-5000",
+           TRUE ~ "greater than 5000"
+           ))
+  ) |> 
+  mutate(amount_category = fct_relevel(amount_category, "greater than 5000", after = 4)) |> # HACK releveling default levels
+  count(amount_category) |> 
+  ggplot(aes(n, fct_rev(amount_category))) + # HACK flipping your levels with forcats
+  geom_col()
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
