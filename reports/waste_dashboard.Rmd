@@ -1,8 +1,8 @@
 ---
-title: "Untitled"
+title: "Waste Board"
 output: 
   flexdashboard::flex_dashboard:
-    orientation: columns
+    orientation: rows
     vertical_layout: fill
 ---
 

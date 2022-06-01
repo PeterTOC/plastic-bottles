@@ -1,0 +1,133 @@
+---
+title: "Waste dataviz 1"
+author: "Peter Boshe"
+date: "01/06/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(fig.align = 'center', collapse = TRUE, echo = FALSE, message = FALSE)
+```
+
+
+
+```{r}
+# Packages
+library(tidyverse)
+# library(gghighlight)
+library(ggtext)
+
+# Parameters
+  #input
+file_raw <- here::here("data/clean_waste_base_data.rds")
+
+# theme update
+
+theme_set(theme_classic())
+
+```
+
+
+
+```{r}
+df <- read_rds(file_raw)
+
+## Recoding df$product_category into df$product_category_rec
+df$product_category_rec <- df$product_category %>%
+  fct_recode(
+    "juices and punches" = "juice",
+    "energy drinks" = "energy drink",
+    "carbonated drinks" = "carbonated drink"
+  )
+
+## Recoding df$month into df$month_rec
+df$month_rec <- df$month %>%
+  fct_recode(
+    "Jan" = "01",
+    "Feb" = "02",
+    "Mar" = "03",
+    "Apr" = "04",
+    "May" = "05",
+    "Jun" = "06",
+    "Jul" = "07",
+    "Aug" = "08",
+    "Sep" = "09",
+    "Oct" = "10",
+    "Nov" = "11",
+    "Dec" = "12"
+  )
+
+df |> 
+  group_by(year, month_rec, product_category_rec) |> 
+  summarise(total_bottles = sum(bottle_count)) |> ## Reordering df$product_category
+  mutate(
+    product_category_rec = fct_reorder(product_category_rec, total_bottles, .desc = T),
+    color_dat = fct_inorder(case_when(
+    product_category_rec == "water" ~ "#54B8FF",
+    product_category_rec == "carbonated drinks" ~ "#FA6176",
+    product_category_rec == "energy drinks" ~ "#975CE6",
+    TRUE ~ "darkgrey"
+  ))) -> colored_data
+
+## Reordering colored_data$product_category_rec
+colored_data$product_category_rec <- colored_data$product_category_rec %>%
+  fct_relevel(
+    "domestic products", "food products", "unknown", "juices and punches",
+    "hard liquor", "beer", "energy drinks", "carbonated drinks",
+    "water"
+  )
+
+
+
+glimpse(colored_data)
+
+  ggplot(colored_data, aes(month_rec,total_bottles, group = product_category_rec)) +
+  geom_col(fill = colored_data$color_dat,
+           color = "black") +
+  facet_wrap( ~ year) +
+  labs(title = "The total bottle count has been rising steadily since start of project",
+       subtitle = "Water and Carbonated Soft drinks products contributing to more than 50% of total waste collected",
+       caption = "Source:wastebase.io",
+       y = "",
+       x = "") -> p
+```
+
+
+
+```{r}
+# HACK annotating individual facets
+
+label_text <- data.frame(year = c(2021, 2021), 
+                         label = c("The total bottle count <br>has been rising steadily<br> since start of project","<span style='color:#54B8FF'> Water</span> and <span style='color:#FA6176'>Carbonated Soft drinks</span> <br>products contributing to more than <br>**50%** of total waste collected"),
+                         month_rec = c(6,6),
+                         total_bottles = c(170000,90000),
+                         product_category_rec = c("","")) # HACK this line was needed to silence error
+
+
+
+
+
+p + theme(
+    panel.background = element_rect(fill = "lightgrey"),
+    plot.background = element_rect(fill = "lightgrey"),
+    # panel.background = element_blank(),
+    axis.line = element_blank(),
+    axis.ticks = element_blank(),
+    strip.background = element_blank(),
+    strip.placement = "outside",
+    title = element_blank()
+  ) +
+  scale_x_discrete(position = "bottom") +
+  scale_y_continuous(breaks = seq(0,200000,10000),
+                    limits = c(0,200000),
+                    labels = scales::comma) +
+  geom_richtext(data = label_text,
+            aes(x = month_rec, y = total_bottles, 
+                label = label),
+            label.color = NA,
+            fill = NA)
+  
+
+
+```
+

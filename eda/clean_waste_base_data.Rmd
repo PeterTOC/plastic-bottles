@@ -70,14 +70,6 @@ df |>
   geom_col() +
   coord_flip()
 
-
-df |> 
-  group_by(batch) |> 
-  summarise(total_bottles = sum(bottle_count)) |> 
-  ggplot(aes(batch,total_bottles)) +
-  geom_col() +
-  geom_line(aes(group = 1)) +
-  geom_point() 
 ```
 
 - product label distribution
@@ -143,7 +135,7 @@ df |>
 
 
 
-- brand name distribution
+- brand name distribution and scan country
 
 ```{r}
 df |> 
