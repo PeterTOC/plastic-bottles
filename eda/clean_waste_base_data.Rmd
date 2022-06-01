@@ -1,6 +1,6 @@
 ---
 title: "Waste data exploration"
-author: "Your Name"
+author: "Peter Boshe"
 date: "`r format(Sys.time(), '%d %B, %Y')`"
 output:
   html_document:
