@@ -17,7 +17,7 @@ library(tidyverse)
 # library(gghighlight)
 library(ggtext)
 library(patchwork)
-library(showtext)
+# library(showtext)
 
 # Parameters
   #input
@@ -35,10 +35,10 @@ energy_color <- "#ec4e20"
 
 # import fonts
 
-font_add_google('Lora', 'lora')
-font_add_google('Fira Sans', 'firasans')
-font_add_google('Dosis', 'dosis')
-showtext_auto()
+# font_add_google('Lora', 'lora')
+# font_add_google('Fira Sans', 'firasans')
+# font_add_google('Dosis', 'dosis')
+# showtext_auto()
 
 ```
 
@@ -100,10 +100,8 @@ glimpse(colored_data)
   geom_col(fill = colored_data$color_dat,
            color = "white") +
   facet_wrap( ~ year) +
-  labs(title = "Can we not handle our petty bottles better?",
-       # subtitle = "Water and Carbonated Soft drinks products contributing to more than 50% of total waste collected",
-       caption = "Source:wastebase.io",
-       y = "TOTAL UNITS COLLECTED",
+  labs(
+       y = "TOTAL BOTTLES SCANNED",
        x = "") -> p
 ```
 
@@ -112,32 +110,43 @@ glimpse(colored_data)
 ```{r}
 # HACK annotating individual facets
 
-label_text <- data.frame(year = c(2022, 2021, 2022), 
-                         label = c("The total waste collected <br>has been rising steadily<br> since start of project<br>","<span style='color:#016fb9'> **Water**</span> and <span style='color:#ff9505'>**Carbonated Soft drinks** </span> <br>products contributing to more than <br>**50%** of total waste collected","Although we also had <br>other product categories <br>like hard liquor,<br> juices&punches,<br>domestic products and <br>food products, These <br>were not as <br>abundant as their <br>counterparts<br>highlighted"),
-                         month_rec = c(9,7,9),
-                         total_bottles = c(170000,130000,60000),
-                         product_category_rec = c("","","")) # HACK this line was needed to silence error
+label_text <- data.frame(year = c(2021, 2021, 2022), 
+                         label = c("while more than 70% of the<br>waste scanned were <br>plastic bottles of 1 litre<br>and below","<span style='color:#016fb9'><strong>Water</strong></span>, <span style='color:#ff9505'><strong>soft drinks</strong></span> and <span style='color:#ec4e20'><strong>energy drink</strong></span><br>products contributed to more than <br><b>90%</b> of the total waste scanned","Although we also <br>had other product <br>categories like;<br> - hard liquor,<br> - juices&punches,<br> - domestic products,<br> -food products,<br> and others...<br>they were not as <br>abundant as their <br>counterparts<br>highlighted."),
+                         month_rec = c(7.7,7.7,13.5),
+                         total_bottles = c(120000,170000,90000),
+                         product_category_rec = c("","",""),
+                         hjust = c("middle","middle","right")) # HACK this line was needed to silence error
 
+segment_df <- data.frame(x = 4.5, 
+                 y = 155000,
+                 xend = 6.5,
+                 yend = 150000,
+                 year = 2022,
+                 product_category_rec = "")
 
-title_text <- "Can we **not** handle our petty drinks better?"
-caption_text <- "Source:wastebase.io"
+title_text <- "Can't we handle our thirst-quenchers better?"
+subtitle_text <- "The total plastic bottles scanned has been rising steadily since the project began<br>on March, 2021.<br>Do we need alternative packaging or just better waste management?"
+caption_text <- "data source:wastebase.org<br>author:Peter Boshe <span style='color:#016fb9'>peterboshe.netlify.app</span>"
 
 
 p + theme(
-    panel.background = element_rect(fill = "white"),
-    plot.background = element_rect(fill = "white"),
+    panel.background = element_rect(fill = "cornsilk"),
+    plot.background = element_rect(fill = "cornsilk"),
     # panel.background = element_blank(),
-    axis.text = element_text(colour = "darkgrey",
+    axis.text.y = element_text(colour = "darkgrey",
                             size = 10),
+    axis.text.x = element_text(colour = "darkgrey",
+                               size = 9),
     axis.line.y = element_blank(),
     axis.line.x = element_line(colour = "darkgrey"),
     axis.ticks.x = element_line(colour = "darkgrey"),
     axis.ticks.y = element_blank(),
     strip.background = element_blank(),
     strip.placement = "outside",
-    strip.text = element_text(colour = "darkgrey",
+    strip.text = element_text(colour = "red",
                               hjust = 0,
-                              face = "bold"),
+                              face = "bold",
+                              size = 11),
     axis.title.y = element_text(colour = "darkgrey",
                                 hjust = 1),
     plot.title.position = "plot",
@@ -147,26 +156,49 @@ p + theme(
   scale_y_continuous(breaks = seq(0,200000,10000),
                     limits = c(0,200000),
                     labels = scales::comma) +
+  geom_curve(data = segment_df,aes(x = x, 
+                 y = y,
+                 xend = xend,
+                 yend = yend), 
+             curvature = -0.2,
+             angle = 120, 
+             ncp = 5,
+             color = "darkgrey",
+             arrow = arrow(angle = 30, 
+                           length = unit(0.2, "cm"), 
+                           ends = "first", 
+                           type = "open")) +
   geom_richtext(data = label_text,
             aes(x = month_rec, y = total_bottles, 
-                label = label),
+                label = label, hjust = hjust),
             label.color = NA,
             fill = NA,
-            size = 6,
-            family = 'dosis') +
+            size = 4,
+            family = 'wqy-microhei') +
   coord_cartesian(expand = F,
                   clip = "off") +
   plot_annotation(
     title = title_text,
+    # subtitle = subtitle_text,
     caption = caption_text,
     theme = theme(
-      plot.title = element_markdown(
-        # margin = margin(b = 0.4, unit = 'cm'),
-        # 0.4cm margin at bottom of title
-        size = 16,
-        colour = "#016fb9",
-        linewidth = 6
-      ),
+      # plot.title = element_markdown(
+      #   # margin = margin(b = 0.4, unit = 'cm'),
+      #   # 0.4cm margin at bottom of title
+      #   size = 16,
+      #   colour = "#016fb9",
+      #   linewidth = 6
+      # ),
+      plot.title = element_textbox_simple(
+       size = 16,
+      lineheight = 1,
+      padding = margin(5.5, 5.5, 5.5, 5.5),
+      margin = margin(0, 0, 5.5, 0),
+      fill = "cornsilk",
+      colour = "#016fb9"),
+      # plot.subtitle = element_markdown(
+      #   size = 13
+      # ),
       plot.caption.position = 'plot',
       plot.caption = element_markdown(
         hjust = 0, 
@@ -174,7 +206,7 @@ p + theme(
         colour = "darkgrey", 
         lineheight = 1.25
       ),
-      plot.background = element_rect(fill = 'white', colour = NA)
+      plot.background = element_rect(fill = 'cornsilk', colour = NA)
       # This is only a trick to make sure that background really is white
       # Otherwise, some browsers or photo apps will apply a dark mode
     )
