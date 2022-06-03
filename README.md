@@ -5,9 +5,30 @@ The data was collected by [Wastebase's Data Partners](https://www.unwaste.io/par
 ### Context
 Regularly-collected data about single-use plastic bottle waste found in public spaces, identified to the level of individual commercial products.
 
-Report coming soon ...
+**Sample insights dataviz from the project**
 
-some commonly occuring labels in the dataset:
+![image](https://github.com/PeterTOC/plastic-bottles/blob/master/docs/dataviz.png)
+
+As the dataset includes data scanned from several countries including;
+- Mozambique
+- Tanzania 
+- Zambia
+- Kenya
+
+It might be useful to aggregate the data by the country the plastic bottles were scanned from.
+
+*Dashboard coming soon ...* 🤞 
+
+long term goals;
+
+- To build a regression model to predict the number of bottles scanned for the coming months
+- tune the gauge the model monthly and improve performance
+
+                                              ✨ progress over perfection ✨
+
+
+
+heres a preview of some commonly occuring brand labels from Tanzania in the dataset:
 ![image](https://github.com/PeterTOC/plastic-bottles/blob/master/docs/pollutants.png)
 
 
