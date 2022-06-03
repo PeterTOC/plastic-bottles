@@ -28,9 +28,6 @@ long term goals;
 
 
 
-heres a preview of some commonly occuring brand labels from Tanzania in the dataset:
-![image](https://github.com/PeterTOC/plastic-bottles/blob/master/docs/pollutants.png)
-
 
 
 
