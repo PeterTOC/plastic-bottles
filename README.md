@@ -24,7 +24,7 @@ long term goals;
 - To build a regression model to predict the number of bottles scanned for the coming months
 - tune the gauge the model monthly and improve performance
 
-                                              ✨ progress over perfection ✨
+                                       ✨ progress over perfection ✨
 
 
 
