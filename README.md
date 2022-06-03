@@ -14,6 +14,8 @@ As the dataset includes data scanned from several countries including;
 - Tanzania 
 - Zambia
 - Kenya
+- Malawi
+- Rwanda
 
 It might be useful to aggregate the data by the country the plastic bottles were scanned from.
 
