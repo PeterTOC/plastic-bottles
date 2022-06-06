@@ -112,9 +112,9 @@ glimpse(colored_data)
 # HACK annotating individual facets
 
 label_text <- data.frame(year = c(2021, 2021, 2022), 
-                         label = c("while more than 70% of the<br>waste scanned were <br>plastic bottles of 1 litre<br>and below.","<span style='color:#016fb9'><strong>Water</strong></span>, <span style='color:#ff9505'><strong>soft drinks</strong></span> and <span style='color:#ec4e20'><strong>energy drink</strong></span><br>products contributed to more than <br>85% of the total waste scanned,","Although we also <br>had other product <br>categories like;<br> - hard liquor,<br> - juices&punches,<br> - domestic products,<br> -food products,<br> and others...<br>they were not as <br>abundant as their <br>counterparts<br>highlighted."),
+                         label = c("while more than 70% of the<br>waste scanned were <br>plastic bottles of 1 litre<br>and below.","<span style='color:#016fb9'><strong>Water</strong></span>, <span style='color:#ff9505'><strong>soft(carbonated)drinks</strong></span><br>and <span style='color:#ec4e20'><strong>energy drinks</strong></span> products<br> contributed to more than <br>85% of total waste scanned,","Although we also <br>had other product <br>categories like;<br> - hard liquor,<br> - juices&punches,<br> - domestic products,<br> -food products,<br> and others...<br>they were not as <br>abundant as their <br>counterparts<br>highlighted."),
                          month_rec = c(7.7,7.7,13.5),
-                         total_bottles = c(120000,170000,90000),
+                         total_bottles = c(110000,170000,90000),
                          product_category_rec = c("","",""),
                          hjust = c("middle","middle","right")) # HACK this line was needed to silence error
 
