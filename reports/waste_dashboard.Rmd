@@ -90,17 +90,6 @@ leaflet(map) |>
 
 
 ```{r}
-# df |> 
-#   group_by(brand_name, scan_country) |> 
-#   summarise(total = sum(bottle_count)) |> 
-#   group_by(scan_country) |> 
-#   slice_max(order_by = total,n = 5) |> 
-#   arrange(total) |>
-#   # fct_reorder(df$brand_name,total, min, .desc = TRUE)
-#   # na.omit() |> 
-#   ggplot(aes(total, fct_inorder(droplevels(brand_name)))) +
-#   geom_col() +
-#   facet_wrap( ~ scan_country, scales = "free")
 
 df |> 
     group_by(brand_name, scan_country) |> 
@@ -152,18 +141,6 @@ df |>
 ```
 
 
-### scan country distribution
-
-```{r}
-df |> 
-  group_by(scan_country) |> 
-  summarise(total = sum(bottle_count)) |> 
-  arrange(total) |> 
-  ggplot(aes(total, fct_inorder(scan_country))) + 
-  geom_col() +
-  geom_label(aes(label = total))
-```
-
 ### manufacturer country distribution
 
 ```{r}
@@ -181,6 +158,11 @@ df |>
 
 Column {data-width=350}
 -----------------------------------------------------------------------
+
+### description
+
+the time right now is `r Sys.time()`
+
 
 ### batch amount progression
 
