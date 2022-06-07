@@ -2,7 +2,7 @@
 title: "Waste Board"
 output: 
   flexdashboard::flex_dashboard:
-    orientation: rows
+    orientation: columns
     vertical_layout: fill
 ---
 
@@ -10,6 +10,9 @@ output:
 # Packages
 library(tidyverse)
 library(flexdashboard)
+library(leaflet)
+library(rnaturalearth)
+library(sp)
 
 # Parameters
   #input
@@ -22,12 +25,62 @@ theme_set(theme_classic())
 # read data 
 df <- read_rds(file_raw)
 
+
+
 ```
 
-Column {data-width=650}
+Column {.tabset data-width=650}
 -----------------------------------------------------------------------
 
+### Total bottles collected per country
+
+```{r}
+
+map <- ne_countries()
+
+
+scan_country_count <- df |> 
+  group_by(scan_country) |> 
+  summarise(total_bottles = sum(bottle_count))
+
+map$bottle_count <- as_vector(scan_country_count[match(map$iso_a2,str_to_upper(scan_country_count$scan_country)), "total_bottles"])
+
+# set color palettte for map
+
+pal <- colorBin(
+  palette = "viridis", domain = map$bottle_count,
+  bins = seq(0, max(map$bottle_count, na.rm = TRUE) + 10, by = 10)
+)
+
+
+map$labels <- paste0(
+  "<strong> Country: </strong> ",
+  map$name, "<br/> ",
+  "<strong> Bottle Count: </strong> ",
+  map$bottle_count, "<br/> "
+) %>%
+  lapply(htmltools::HTML)
+
+leaflet(map) |> 
+  addTiles() |> 
+  setView(lng = 25, lat = 0, zoom = 4) %>%
+  addPolygons(
+    fillColor = ~ pal(bottle_count),
+    color = "white",
+    fillOpacity = 0.7,
+    label = ~labels,
+    highlight = highlightOptions(
+      color = "black",
+      bringToFront = TRUE
+    )
+  ) 
+ 
+
+```
+
+
 ### brand name distribution and scan country
+
 
 ```{r}
 df |> 
@@ -41,8 +94,35 @@ df |>
   ggplot(aes(total, fct_inorder(droplevels(brand_name)))) +
   geom_col() +
   facet_wrap( ~ scan_country, scales = "free")
-
 ```
+
+
+### scan country distribution
+
+```{r}
+df |> 
+  group_by(scan_country) |> 
+  summarise(total = sum(bottle_count)) |> 
+  arrange(total) |> 
+  ggplot(aes(total, fct_inorder(scan_country))) + 
+  geom_col() +
+  geom_label(aes(label = total))
+```
+
+### manufacturer country distribution
+
+```{r}
+df |> 
+  group_by(manufacturer_country) |> 
+  summarise(total = sum(bottle_count)) |> 
+  arrange(total) |> 
+  ggplot(aes(total, fct_inorder(manufacturer_country))) + 
+  geom_col() +
+  geom_label(aes(label = total))
+```
+
+
+
 
 Column {data-width=350}
 -----------------------------------------------------------------------
@@ -97,15 +177,4 @@ df |>
   geom_col()
 ```
 
-### scan country distribution
-
-```{r}
-df |> 
-  group_by(scan_country) |> 
-  summarise(total = sum(bottle_count)) |> 
-  arrange(total) |> 
-  ggplot(aes(total, fct_inorder(scan_country))) + 
-  geom_col() +
-  geom_label(aes(label = total))
-```
 
