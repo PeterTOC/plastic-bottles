@@ -2,7 +2,10 @@
 title: "Waste Board"
 output: 
   flexdashboard::flex_dashboard:
-    orientation: rows
+    theme:
+      version: 4
+      bootswatch: sketchy
+    orientation: columns
     vertical_layout: fill
 ---
 
@@ -10,6 +13,10 @@ output:
 # Packages
 library(tidyverse)
 library(flexdashboard)
+library(leaflet)
+library(rnaturalearth)
+library(sp)
+library(bslib)
 
 # Parameters
   #input
@@ -22,27 +29,142 @@ theme_set(theme_classic())
 # read data 
 df <- read_rds(file_raw)
 
+# set uniform themec("#43CD80", "#FFFFFF", "#FFFFFF")
+
+# thematic::thematic_rmd(bg = 'white', fg = 'seagreen3', accent = 'black')
+thematic::thematic_on()
+
 ```
 
-Column {data-width=650}
+Column {.tabset data-width=650}
 -----------------------------------------------------------------------
+
+### Total bottles collected per country
+
+```{r}
+
+map <- ne_countries()
+
+
+scan_country_count <- df |> 
+  group_by(scan_country) |> 
+  summarise(total_bottles = sum(bottle_count))
+
+map$bottle_count <- as_vector(scan_country_count[match(map$iso_a2,str_to_upper(scan_country_count$scan_country)), "total_bottles"])
+
+# set color palettte for map
+
+pal <- colorBin(
+  palette = "viridis", domain = map$bottle_count,
+  bins = seq(0, max(map$bottle_count, na.rm = TRUE) + 10, by = 10)
+)
+
+
+map$labels <- paste0(
+  "<strong> Country: </strong> ",
+  map$name, "<br/> ",
+  "<strong> Bottle Count: </strong> ",
+  map$bottle_count, "<br/> "
+) %>%
+  lapply(htmltools::HTML)
+
+leaflet(map) |> 
+  addTiles() |> 
+  setView(lng = 25, lat = 0, zoom = 4) %>%
+  addPolygons(
+    fillColor = ~ pal(bottle_count),
+    color = "white",
+    fillOpacity = 0.7,
+    label = ~labels,
+    highlight = highlightOptions(
+      color = "black",
+      bringToFront = TRUE
+    )
+  ) 
+ 
+
+```
+
 
 ### brand name distribution and scan country
 
+
+```{r}
+# df |> 
+#   group_by(brand_name, scan_country) |> 
+#   summarise(total = sum(bottle_count)) |> 
+#   group_by(scan_country) |> 
+#   slice_max(order_by = total,n = 5) |> 
+#   arrange(total) |>
+#   # fct_reorder(df$brand_name,total, min, .desc = TRUE)
+#   # na.omit() |> 
+#   ggplot(aes(total, fct_inorder(droplevels(brand_name)))) +
+#   geom_col() +
+#   facet_wrap( ~ scan_country, scales = "free")
+
+df |> 
+    group_by(brand_name, scan_country) |> 
+    summarise(total = sum(bottle_count)) |> 
+    group_by(scan_country) |> mutate(scan_country=fct_reorder(scan_country, total, .desc = TRUE))|> 
+    slice_max(order_by = total,n = 5) |> 
+    arrange(total) -> countries_arranged
+
+## Recoding countries_arranged$scan_country into countries_arranged$scan_country_rec
+countries_arranged$scan_country_rec <- countries_arranged$scan_country %>%
+  fct_recode(
+    "Angola" = "ao",
+    "Brazil" = "br",
+    "Canada" = "ca",
+    "Switzerland" = "ch",
+    "Spain" = "es",
+    "France" = "fr",
+    "Great Britain" = "gb",
+    "Kenya" = "ke",
+    "Malawi" = "mw",
+    "Mozambique" = "mz",
+    "Netherlands" = "nl",
+    "Rwanda" = "rw",
+    "Tanzania" = "tz",
+    "Uganda" = "ug",
+    "South Africa" = "za",
+    "Zambia" = "zm"
+  )
+
+    # fct_reorder(df$brand_name,total, min, .desc = TRUE)
+    # na.omit() |> 
+    ggplot(countries_arranged,aes(total, fct_inorder(droplevels(brand_name)))) +
+    geom_col() +
+    facet_wrap( ~ fct_rev(fct_inorder(scan_country_rec)), scales = "free") +
+      labs(x="",y="")
+```
+
+
+### scan country distribution
+
 ```{r}
 df |> 
-  group_by(brand_name, scan_country) |> 
-  summarise(total = sum(bottle_count)) |> 
   group_by(scan_country) |> 
-  slice_max(order_by = total,n = 5) |> 
-  arrange(total) |>
-  # fct_reorder(df$brand_name,total, min, .desc = TRUE)
-  # na.omit() |> 
-  ggplot(aes(total, fct_inorder(droplevels(brand_name)))) +
+  summarise(total = sum(bottle_count)) |> 
+  arrange(total) |> 
+  ggplot(aes(total, fct_inorder(scan_country))) + 
   geom_col() +
-  facet_wrap( ~ scan_country, scales = "free")
-
+  geom_label(aes(label = total))
 ```
+
+### manufacturer country distribution
+
+```{r}
+df |> 
+  group_by(manufacturer_country) |> 
+  summarise(total = sum(bottle_count)) |> 
+  arrange(total) |> 
+  ggplot(aes(total, fct_inorder(manufacturer_country))) + 
+  geom_col() +
+  geom_label(aes(label = total))
+```
+
+
+
 
 Column {data-width=350}
 -----------------------------------------------------------------------
@@ -79,7 +201,7 @@ df |>
 
 ### storage quantity distribution
 
-```{r}
+```{r, echo=FALSE, fig.cap="ETL project, Author: Peter Boshe https://peterboshe.netlify.app/", out.width = '100%'}
 df |> 
   filter(units == "ml") |>
   mutate(amount = round(amount),
@@ -97,15 +219,4 @@ df |>
   geom_col()
 ```
 
-### scan country distribution
-
-```{r}
-df |> 
-  group_by(scan_country) |> 
-  summarise(total = sum(bottle_count)) |> 
-  arrange(total) |> 
-  ggplot(aes(total, fct_inorder(scan_country))) + 
-  geom_col() +
-  geom_label(aes(label = total))
-```
 
