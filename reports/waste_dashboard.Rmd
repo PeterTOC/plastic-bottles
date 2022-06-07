@@ -2,9 +2,12 @@
 title: "Waste Board"
 output: 
   flexdashboard::flex_dashboard:
+<<<<<<< HEAD
     theme:
       version: 4
       bootswatch: sketchy
+=======
+>>>>>>> 21fd1b5ae88ee102ac21cad9bb3c5ee70987f8c8
     orientation: columns
     vertical_layout: fill
 ---
@@ -16,7 +19,10 @@ library(flexdashboard)
 library(leaflet)
 library(rnaturalearth)
 library(sp)
+<<<<<<< HEAD
 library(bslib)
+=======
+>>>>>>> 21fd1b5ae88ee102ac21cad9bb3c5ee70987f8c8
 
 # Parameters
   #input
@@ -29,10 +35,14 @@ theme_set(theme_classic())
 # read data 
 df <- read_rds(file_raw)
 
+<<<<<<< HEAD
 # set uniform themec("#43CD80", "#FFFFFF", "#FFFFFF")
 
 # thematic::thematic_rmd(bg = 'white', fg = 'seagreen3', accent = 'black')
 thematic::thematic_on()
+=======
+
+>>>>>>> 21fd1b5ae88ee102ac21cad9bb3c5ee70987f8c8
 
 ```
 
@@ -89,6 +99,7 @@ leaflet(map) |>
 ### brand name distribution and scan country
 
 
+<<<<<<< HEAD
 ```{r}
 # df |> 
 #   group_by(brand_name, scan_country) |> 
@@ -141,6 +152,26 @@ countries_arranged$scan_country_rec <- countries_arranged$scan_country %>%
 
 ### scan country distribution
 
+=======
+>>>>>>> 21fd1b5ae88ee102ac21cad9bb3c5ee70987f8c8
+```{r}
+df |> 
+  group_by(scan_country) |> 
+  summarise(total = sum(bottle_count)) |> 
+  arrange(total) |> 
+  ggplot(aes(total, fct_inorder(scan_country))) + 
+  geom_col() +
+<<<<<<< HEAD
+  geom_label(aes(label = total))
+```
+
+=======
+  facet_wrap( ~ scan_country, scales = "free")
+```
+
+
+### scan country distribution
+
 ```{r}
 df |> 
   group_by(scan_country) |> 
@@ -151,6 +182,7 @@ df |>
   geom_label(aes(label = total))
 ```
 
+>>>>>>> 21fd1b5ae88ee102ac21cad9bb3c5ee70987f8c8
 ### manufacturer country distribution
 
 ```{r}
