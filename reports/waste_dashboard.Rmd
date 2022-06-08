@@ -4,10 +4,28 @@ output:
   flexdashboard::flex_dashboard:
     theme:
       version: 4
-      bootswatch: sketchy
+      bootswatch: lux
     orientation: columns
     vertical_layout: fill
 ---
+
+<style>
+.navbar {
+  margin: 0;
+  padding: 0;
+  height: 5.5%;
+  display: block;
+  position: fixed;
+
+}
+</style>
+
+
+
+General stats
+===
+
+
 
 ```{r setup, include=FALSE}
 # Packages
@@ -36,60 +54,27 @@ thematic::thematic_on()
 
 ```
 
-Column {.tabset data-width=650}
+Column 
 -----------------------------------------------------------------------
 
-### Total bottles collected per country
+### {data-height=450}
 
-```{r}
+#### Context
+Regularly-collected data about single-use plastic bottle waste found in public spaces, identified to the level of individual commercial products.
 
-map <- ne_countries()
+#### Content
+This data was collected from March 2021 to April 2022 using the Wastebase digital platform for crowd-sourced data collection about single-use plastic waste.
 
-
-scan_country_count <- df |> 
-  group_by(scan_country) |> 
-  summarise(total_bottles = sum(bottle_count))
-
-map$bottle_count <- as_vector(scan_country_count[match(map$iso_a2,str_to_upper(scan_country_count$scan_country)), "total_bottles"])
-
-# set color palettte for map
-
-pal <- colorBin(
-  palette = "viridis", domain = map$bottle_count,
-  bins = seq(0, max(map$bottle_count, na.rm = TRUE) + 10, by = 10)
-)
+Data is collected via an app for Android or iPhone, and then checked and linked to Brand and Product information by Wastebase Data Partners. Data is collected to the level of the specific product barcode, timestamped and location stamped. You can search for specific data on the [Wastebase data page](https://wastebase.org/#/data).
 
 
-map$labels <- paste0(
-  "<strong> Country: </strong> ",
-  map$name, "<br/> ",
-  "<strong> Bottle Count: </strong> ",
-  map$bottle_count, "<br/> "
-) %>%
-  lapply(htmltools::HTML)
 
-leaflet(map) |> 
-  addTiles() |> 
-  setView(lng = 25, lat = 0, zoom = 4) %>%
-  addPolygons(
-    fillColor = ~ pal(bottle_count),
-    color = "white",
-    fillOpacity = 0.7,
-    label = ~labels,
-    highlight = highlightOptions(
-      color = "black",
-      bringToFront = TRUE
-    )
-  ) 
- 
-
-```
+### Top 5 brands scanned in each country 
 
 
-### brand name distribution and scan country
+```{r, fig.width=9,fig.height=7}
 
 
-```{r}
 
 df |> 
     group_by(brand_name, scan_country) |> 
@@ -121,14 +106,83 @@ countries_arranged$scan_country_rec <- countries_arranged$scan_country %>%
 
     # fct_reorder(df$brand_name,total, min, .desc = TRUE)
     # na.omit() |> 
-    ggplot(countries_arranged,aes(total, fct_inorder(droplevels(brand_name)))) +
-    geom_col() +
+   ggplot(countries_arranged,aes(total, fct_inorder(droplevels(brand_name)))) +
+    geom_col(fill = "aquamarine4") +
     facet_wrap( ~ fct_rev(fct_inorder(scan_country_rec)), scales = "free") +
-      labs(x="",y="")
+      labs(x = "", y = "") +
+  coord_cartesian(expand = F,
+                  clip = "off") +
+    theme(
+    strip.background = element_blank(),
+    strip.placement = "outside",
+    strip.text = element_text(colour = "black",
+                              hjust = 0,
+                              face = "bold",
+                              size = 10),
+    axis.text.y = element_text(size =10,
+                               face = "bold",
+                               color = "black"),
+    axis.text.x = element_text(size =8,
+                               face = "bold",
+                               angle = 45,
+                               vjust = 0.5)
+    )
+   
+
+```
+
+Column {.tabset data-width=1000}
+-----------------------------------------------------------------------
+
+
+### Total bottles collected per country
+
+```{r}
+
+map <- ne_countries()
+
+
+scan_country_count <- df |> 
+  group_by(scan_country) |> 
+  summarise(total_bottles = sum(bottle_count))
+
+map$bottle_count <- as_vector(scan_country_count[match(map$iso_a2,str_to_upper(scan_country_count$scan_country)), "total_bottles"])
+
+# set color palettte for map
+
+pal <- colorBin(
+  palette = "Greens", domain = map$bottle_count,
+  bins = seq(0, max(map$bottle_count, na.rm = TRUE) + 10, by = 10)
+)
+
+
+map$labels <- paste0(
+  "<strong> Country: </strong> ",
+  map$name, "<br/> ",
+  "<strong> Bottle Count: </strong> ",
+  map$bottle_count, "<br/> "
+) %>%
+  lapply(htmltools::HTML)
+
+leaflet(map) |> 
+  addTiles() |> 
+  setView(lng = 25, lat = 0, zoom = 4) %>%
+  addPolygons(
+    fillColor = ~ pal(bottle_count),
+    color = "white",
+    fillOpacity = 0.7,
+    label = ~labels,
+    highlight = highlightOptions(
+      color = "black",
+      bringToFront = TRUE
+    )
+  ) 
+ 
+
 ```
 
 
-### scan country distribution
+### Scan country distribution
 
 ```{r}
 df |> 
@@ -136,12 +190,15 @@ df |>
   summarise(total = sum(bottle_count)) |> 
   arrange(total) |> 
   ggplot(aes(total, fct_inorder(scan_country))) + 
-  geom_col() +
-  geom_label(aes(label = total))
+  geom_col(fill = "aquamarine4") +
+  geom_label(aes(label = total)) +
+      labs(x = "", y = "") +
+  coord_cartesian(expand = F,
+                  clip = "off")
 ```
 
 
-### manufacturer country distribution
+### Manufacturer country distribution
 
 ```{r}
 df |> 
@@ -149,31 +206,49 @@ df |>
   summarise(total = sum(bottle_count)) |> 
   arrange(total) |> 
   ggplot(aes(total, fct_inorder(manufacturer_country))) + 
-  geom_col() +
-  geom_label(aes(label = total))
+  geom_col(fill = "aquamarine4") +
+  geom_label(aes(label = total)) +
+      labs(x = "", y = "") +
+  coord_cartesian(expand = F,
+                  clip = "off")
 ```
 
 
 
 
-Column {data-width=350}
+Column {data-width=650}
 -----------------------------------------------------------------------
 
-### description
-
-the time right now is `r Sys.time()`
 
 
-### batch amount progression
+### **Batch amount progression**
 
-```{r}
+
+```{r, fig.width=11, fig.height=6}
 df |> 
   group_by(batch) |> 
   summarise(total_bottles = sum(bottle_count)) |> 
   ggplot(aes(batch,total_bottles)) +
-  geom_col() +
+  geom_col(fill = "aquamarine4") +
   geom_line(aes(group = 1)) +
-  geom_point() 
+  geom_point()  +
+      labs(x = "", y = "") +
+  coord_cartesian(expand = T,
+                  clip = "off") +
+  scale_y_continuous(labels = scales::comma,
+                     breaks = seq(0,200000, 10000))+
+  geom_label(aes(label = total_bottles),
+             nudge_y = 5000,
+             label.size = 1,
+             size = 7) + 
+  theme(
+    axis.text.y = element_blank(),
+    axis.text.x = element_text(face = "bold",
+                               size = 13,
+                               vjust = 0.5),
+    axis.ticks = element_blank(),
+    axis.line = element_blank()
+  )
   # geom_label(aes(label = total_bottles))
 
 
@@ -181,22 +256,41 @@ df |>
 
 
 
-### product category distribution
+### **Product category distribution**
 
-```{r}
+```{r, fig.width=13}
 df |> 
   group_by(product_category) |> 
   summarise(total = sum(bottle_count)) |> 
   arrange(total) |> 
-  ggplot(aes(fct_inorder(product_category), total)) +
-  geom_col() +
-  coord_flip()
+  ggplot(aes(total,fct_inorder(product_category))) +
+  geom_col(fill = "aquamarine4") +
+      labs(x = "", y = "") +
+  geom_label(aes(label = total),
+             hjust = 0.5,
+             size = 7,
+             label.size = 1)+
+  coord_cartesian(expand = T,
+                  clip = "off") +
+ 
+  scale_x_continuous(position = "top",
+                     labels = scales::comma) +
+  theme(
+    axis.text.y = element_text(size =22,
+                               lineheight = 4,
+                               hjust = 0.5,
+                               color = "black"),
+    axis.text.x = element_blank(),
+    axis.ticks = element_blank(),
+    axis.line = element_blank(),
+    axis.title = element_blank()
+  )
 
 ```
 
-### storage quantity distribution
+### **Plastic bottle capacities (in ml)**
 
-```{r, echo=FALSE, fig.cap="ETL project, Author: Peter Boshe https://peterboshe.netlify.app/", out.width = '100%'}
+```{r, fig.width=10, echo=FALSE, fig.cap="ETL project, Author: Peter Boshe https://peterboshe.netlify.app/", out.width = '100%'}
 df |> 
   filter(units == "ml") |>
   mutate(amount = round(amount),
@@ -211,7 +305,35 @@ df |>
   mutate(amount_category = fct_relevel(amount_category, "greater than 5000", after = 4)) |> # HACK releveling default levels
   count(amount_category) |> 
   ggplot(aes(n, fct_rev(amount_category))) + # HACK flipping your levels with forcats
-  geom_col()
+  geom_col(fill = "aquamarine4") +
+  geom_label(aes(label = n),
+             size = 7,
+             label.size = 1) +
+      labs(x = "", y = "") +
+  theme(
+    axis.text.y = element_text(size =22,
+                               hjust = 0.5,
+                               lineheight = 4,
+                               color = "black"),
+    axis.text.x = element_blank(),
+    axis.ticks = element_blank(),
+    axis.line = element_blank()
+  ) +
+  scale_x_continuous(position = "top",
+                     breaks = seq(0,5000,1000))+
+  coord_cartesian(expand = T,
+                  clip = "off")
 ```
+
+
+Individual Country Reports
+===
+
+#### Coming soon!
+
+Predictive Analysis
+===
+
+#### Coming soon!
 
 

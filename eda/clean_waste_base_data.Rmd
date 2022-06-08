@@ -138,17 +138,51 @@ df |>
 - brand name distribution and scan country
 
 ```{r}
+# df |> 
+#   group_by(brand_name, scan_country) |> 
+#   summarise(total = sum(bottle_count)) |> 
+#   group_by(scan_country) |> 
+#   slice_max(order_by = total,n = 5) |> 
+#   arrange(total) |>
+#   # fct_reorder(df$brand_name,total, min, .desc = TRUE)
+#   # na.omit() |> 
+#   ggplot(aes(total, fct_inorder(droplevels(brand_name)))) +
+#   geom_col() +
+#   facet_wrap( ~ scan_country, scales = "free")
+
 df |> 
-  group_by(brand_name, scan_country) |> 
-  summarise(total = sum(bottle_count)) |> 
-  group_by(scan_country) |> 
-  slice_max(order_by = total,n = 5) |> 
-  arrange(total) |>
-  # fct_reorder(df$brand_name,total, min, .desc = TRUE)
-  # na.omit() |> 
-  ggplot(aes(total, fct_inorder(droplevels(brand_name)))) +
-  geom_col() +
-  facet_wrap( ~ scan_country, scales = "free")
+    group_by(brand_name, scan_country) |> 
+    summarise(total = sum(bottle_count)) |> 
+    group_by(scan_country) |> mutate(scan_country=fct_reorder(scan_country, total, .desc = TRUE))|> 
+    slice_max(order_by = total,n = 5) |> 
+    arrange(total) -> countries_arranged
+
+## Recoding countries_arranged$scan_country into countries_arranged$scan_country_rec
+countries_arranged$scan_country_rec <- countries_arranged$scan_country %>%
+  fct_recode(
+    "Angola" = "ao",
+    "Brazil" = "br",
+    "Canada" = "ca",
+    "Switzerland" = "ch",
+    "Spain" = "es",
+    "France" = "fr",
+    "Great Britain" = "gb",
+    "Kenya" = "ke",
+    "Malawi" = "mw",
+    "Mozambique" = "mz",
+    "Netherlands" = "nl",
+    "Rwanda" = "rw",
+    "Tanzania" = "tz",
+    "Uganda" = "ug",
+    "South Africa" = "za",
+    "Zambia" = "zm"
+  )
+
+    # fct_reorder(df$brand_name,total, min, .desc = TRUE)
+    # na.omit() |> 
+    ggplot(countries_arranged,aes(total, fct_inorder(droplevels(brand_name)))) +
+    geom_col() +
+    facet_wrap( ~ fct_rev(fct_inorder(scan_country_rec)), scales = "free")
 
 ```
 
@@ -198,13 +232,85 @@ df |>
 
 
 
+# geospatial map
+
+```{r}
+library(leaflet)
+library(rnaturalearth)
+library(sp)
+map <- ne_countries()
+# names(map)[names(map) == "iso_a2"] <- "ISO2"
+# names(map)[names(map) == "name"] <- "NAME"
+
+# summary(map)
+# names(map)
+# class(map)
+# str(map)
+# map$iso_a3
+# map$iso_a2
+# map$name
+
+# plot(map)
+
+
+scan_country_count <- df |> 
+  group_by(scan_country) |> 
+  summarise(total_bottles=sum(bottle_count))
+scan_country_count
+
+
+map$bottle_count <- as_vector(scan_country_count[match(map$iso_a2,str_to_upper(scan_country_count$scan_country)), "total_bottles"])
+```
 
 
 
+```{r}
+library(DT)
+DT::datatable(map@data[, c("iso_a2", "name", "bottle_count")],
+  rownames = FALSE, options = list(pageLength = 10)
+)
+```
+
+# plotting the map
+
+```{r}
+
+pal <- colorBin(
+  palette = "viridis", domain = map$bottle_count,
+  bins = seq(0, max(map$bottle_count, na.rm = TRUE) + 10, by = 10)
+)
+
+
+map$labels <- paste0(
+  "<strong> Country: </strong> ",
+  map$name, "<br/> ",
+  "<strong> Bottle Count: </strong> ",
+  map$bottle_count, "<br/> "
+) %>%
+  lapply(htmltools::HTML)
+
+leaflet(map) |> 
+  addTiles() |> 
+  setView(lng = 25, lat = 0, zoom = 4) %>%
+  addPolygons(
+    fillColor = ~ pal(bottle_count),
+    color = "white",
+    fillOpacity = 0.7,
+    label = ~labels,
+    highlight = highlightOptions(
+      color = "black",
+      bringToFront = TRUE
+    )
+  ) 
+  # leaflet::addLegend(
+  #   pal = pal ,values = ~bottle_count,
+  #   opacity = 0.7, title = "Bottle Count"
+  # )
+  # 
 
 
 
-
+```
 
 
 
