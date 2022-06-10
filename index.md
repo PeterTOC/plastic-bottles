@@ -1,33 +1,34 @@
-## Welcome to GitHub Pages
+# Waste Board
 
-You can use the [editor on GitHub](https://github.com/PeterTOC/plastic-bottles/edit/gh-pages/index.md) to maintain and preview the content for your website in Markdown files.
+The data was collected by [Wastebase's Data Partners](https://www.unwaste.io/partners) by methods decribed on this [source page](https://www.kaggle.com/wastebase/plastic-bottle-waste)
 
-Whenever you commit to this repository, GitHub Pages will run [Jekyll](https://jekyllrb.com/) to rebuild the pages in your site, from the content in your Markdown files.
+### Context
+Regularly-collected data about single-use plastic bottle waste found in public spaces, identified to the level of individual commercial products.
 
-### Markdown
+**Sample insights dataviz from the project**
 
-Markdown is a lightweight and easy-to-use syntax for styling your writing. It includes conventions for
+![image](https://github.com/PeterTOC/plastic-bottles/blob/master/docs/dataviz.png)
 
-```markdown
-Syntax highlighted code block
+As the dataset includes data scanned from several countries including;
+- Mozambique
+- Tanzania 
+- Zambia
+- Kenya
+- Malawi
+- Rwanda
 
-# Header 1
-## Header 2
-### Header 3
+It might be useful to aggregate the data by the country the plastic bottles were scanned from.
 
-- Bulleted
-- List
+*Dashboard coming soon ...* 🤞 
 
-1. Numbered
-2. List
+long term goals;
 
-**Bold** and _Italic_ and `Code` text
+- To build a regression model to predict the number of bottles scanned for the coming months
+- tune the gauge the model monthly and improve performance
 
-[Link](url) and ![Image](src)
-```
-
-For more details see [Basic writing and formatting syntax](https://docs.github.com/en/github/writing-on-github/getting-started-with-writing-and-formatting-on-github/basic-writing-and-formatting-syntax).
-
+                                       ✨ progress over perfection ✨
+                                       
+                                       
 ### Jekyll Themes
 
 Your Pages site will use the layout and styles from the Jekyll theme you have selected in your [repository settings](https://github.com/PeterTOC/plastic-bottles/settings/pages). The name of this theme is saved in the Jekyll `_config.yml` configuration file.
