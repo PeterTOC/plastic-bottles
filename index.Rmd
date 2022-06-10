@@ -40,9 +40,9 @@ library(countrycode)
 
 # Parameters
   #input
-file_raw <- here::here("data/clean_waste_base_data.rds")
-file_flags <- here::here("data-raw/Country_Flags.csv")
-report <- here::here("reports/waste_dashboard.Rmd")
+file_raw <- here::here("docs/data/clean_waste_base_data.rds")
+file_flags <- here::here("docs/data-raw/Country_Flags.csv")
+report <- here::here("docs/reports/waste_dashboard.Rmd")
 
   #output
 html_output <- here::here("docs/")

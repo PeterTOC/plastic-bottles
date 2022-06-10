@@ -30,4 +30,4 @@ all_files |>
   bind_rows(.id = "batch") |>
   write_rds(file_out)
 
-
+# TODO must update all locations
