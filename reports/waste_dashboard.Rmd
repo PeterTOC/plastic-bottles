@@ -35,10 +35,17 @@ library(leaflet)
 library(rnaturalearth)
 library(sp)
 library(bslib)
+library(gt)
+library(countrycode)
 
 # Parameters
   #input
 file_raw <- here::here("data/clean_waste_base_data.rds")
+file_flags <- here::here("data-raw/Country_Flags.csv")
+report <- here::here("reports/waste_dashboard.Rmd")
+
+  #output
+html_output <- here::here("docs/")
 
 # theme update
 
@@ -52,21 +59,188 @@ df <- read_rds(file_raw)
 # thematic::thematic_rmd(bg = 'white', fg = 'seagreen3', accent = 'black')
 thematic::thematic_on()
 
+
+# code to direct rendered report to docs
+# rmarkdown::render(report, output_dir = html_output)
+
+
 ```
+
+
 
 Column 
 -----------------------------------------------------------------------
 
-### {data-height=450}
-
-#### Context
+#### <span style='color:#458B74'>Context</span>
 Regularly-collected data about single-use plastic bottle waste found in public spaces, identified to the level of individual commercial products.
 
-#### Content
+#### <span style='color:#458B74'>Content</span>
 This data was collected from March 2021 to April 2022 using the Wastebase digital platform for crowd-sourced data collection about single-use plastic waste.
 
 Data is collected via an app for Android or iPhone, and then checked and linked to Brand and Product information by Wastebase Data Partners. Data is collected to the level of the specific product barcode, timestamped and location stamped. You can search for specific data on the [Wastebase data page](https://wastebase.org/#/data).
 
+
+
+### 
+
+
+<div style='height:500px; overflow-y: scroll'>
+
+```{r, fig.height=20}
+
+
+flags <- read_csv(file_flags) |> 
+  mutate(Code = as_factor(str_to_lower(countrycode(sourcevar = Country, origin = "country.name", destination = "iso2c", warn = FALSE)))) |> 
+  select(Code,
+         flag_URL = ImageURL)
+
+
+
+df |>
+  group_by(scan_country, batch) |>
+  summarise(total_bottles = sum(bottle_count),
+            .groups = "drop") |>
+  nest(data = -scan_country) |>
+  mutate(scan_country_total = map_dbl(data, ~ sum(.$total_bottles))) |>
+  arrange(desc(scan_country_total)) |>
+  mutate(scan_country= fct_inorder(scan_country)) |> 
+  unnest(cols = data) -> table
+
+table$scan_country_rec <- table$scan_country %>%
+  fct_recode(
+    "Angola" = "ao",
+    "Brazil" = "br",
+    "Canada" = "ca",
+    "Switzerland" = "ch",
+    "Spain" = "es",
+    "France" = "fr",
+    "Great Britain" = "gb",
+    "Kenya" = "ke",
+    "Malawi" = "mw",
+    "Mozambique" = "mz",
+    "Netherlands" = "nl",
+    "Rwanda" = "rw",
+    "Tanzania" = "tz",
+    "Uganda" = "ug",
+    "South Africa" = "za",
+    "Zambia" = "zm"
+  )
+
+ table |> 
+  left_join(flags, by = c("scan_country" = "Code")) |>
+  nest(data = -scan_country_rec) |>
+  mutate(last_change = map_dbl(data, ~ . |>  # HACK how to map a piping function
+    mutate(change = c(0, diff(total_bottles))) |>
+    slice_tail(n = 1) |>
+    pull(change)),
+    last_month_rec = map_dbl(data, ~. |> 
+                               slice_tail(n = 1) |> 
+                               pull(total_bottles))) |>
+  unnest() |>
+  distinct(flag_URL,
+           scan_country,
+           scan_country_rec, 
+           last_month_rec,
+           last_change,
+           scan_country_total) |> 
+  select(flag_URL,
+         scan_country_rec, 
+           last_month_rec,
+           last_change,
+           scan_country_total) |> 
+ 
+   gt() |> 
+  cols_label(flag_URL = "",
+             scan_country_rec = md("**Country**"),
+             last_month_rec = md("**Latest Count**"),
+             last_change = md("**Difference from<br>prev. month**"),
+             scan_country_total = md("**Total bottles<br>scanned**"))|> 
+    gt::text_transform(
+    #Apply a function to a column
+    locations = cells_body(c(flag_URL)),
+    fn = function(x) {
+      #Return an image of set dimensions
+      web_image(
+        url = x,
+        height = 12
+      )
+    }) |> 
+  cols_width(c(flag_URL) ~ px(30)) |> 
+   # tab_header(title = md("**Summary Table**")) |> 
+   opt_align_table_header(align = "left") |> 
+   tab_style(
+     locations = cells_title(groups = "title"),
+     style = list(
+       cell_text(weight = "bold",
+                 size = 24)
+     )
+   ) |> 
+   fmt_number(columns = 3:5,
+              sep_mark = ",",
+              decimals = 0) |> 
+  data_color(
+    columns = 5,
+    colors = scales::col_numeric(
+      palette = as.character(paletteer::paletteer_d(palette = "ggsci::red_material")),
+      domain = NULL
+    )
+  )
+ 
+ # TODO add indexing to the table
+
+
+```
+</div>
+
+Column {.tabset data-width=900}
+-----------------------------------------------------------------------
+
+
+### Total bottles collected per country
+
+```{r}
+
+map <- ne_countries()
+
+
+scan_country_count <- df |> 
+  group_by(scan_country) |> 
+  summarise(total_bottles = sum(bottle_count))
+
+map$bottle_count <- as_vector(scan_country_count[match(map$iso_a2,str_to_upper(scan_country_count$scan_country)), "total_bottles"])
+
+# set color palettte for map
+
+pal <- colorBin(
+  palette = "Greens", domain = map$bottle_count,
+  bins = seq(0, max(map$bottle_count, na.rm = TRUE) + 10, by = 10)
+)
+
+
+map$labels <- paste0(
+  "<strong> Country: </strong> ",
+  map$name, "<br/> ",
+  "<strong> Bottle Count: </strong> ",
+  map$bottle_count, "<br/> "
+) %>%
+  lapply(htmltools::HTML)
+
+leaflet(map) |> 
+  addTiles() |> 
+  setView(lng = 25, lat = 0, zoom = 4) %>%
+  addPolygons(
+    fillColor = ~ pal(bottle_count),
+    color = "white",
+    fillOpacity = 0.7,
+    label = ~labels,
+    highlight = highlightOptions(
+      color = "black",
+      bringToFront = TRUE
+    )
+  ) 
+ 
+
+```
 
 
 ### Top 5 brands scanned in each country 
@@ -131,56 +305,6 @@ countries_arranged$scan_country_rec <- countries_arranged$scan_country %>%
 
 ```
 
-Column {.tabset data-width=1000}
------------------------------------------------------------------------
-
-
-### Total bottles collected per country
-
-```{r}
-
-map <- ne_countries()
-
-
-scan_country_count <- df |> 
-  group_by(scan_country) |> 
-  summarise(total_bottles = sum(bottle_count))
-
-map$bottle_count <- as_vector(scan_country_count[match(map$iso_a2,str_to_upper(scan_country_count$scan_country)), "total_bottles"])
-
-# set color palettte for map
-
-pal <- colorBin(
-  palette = "Greens", domain = map$bottle_count,
-  bins = seq(0, max(map$bottle_count, na.rm = TRUE) + 10, by = 10)
-)
-
-
-map$labels <- paste0(
-  "<strong> Country: </strong> ",
-  map$name, "<br/> ",
-  "<strong> Bottle Count: </strong> ",
-  map$bottle_count, "<br/> "
-) %>%
-  lapply(htmltools::HTML)
-
-leaflet(map) |> 
-  addTiles() |> 
-  setView(lng = 25, lat = 0, zoom = 4) %>%
-  addPolygons(
-    fillColor = ~ pal(bottle_count),
-    color = "white",
-    fillOpacity = 0.7,
-    label = ~labels,
-    highlight = highlightOptions(
-      color = "black",
-      bringToFront = TRUE
-    )
-  ) 
- 
-
-```
-
 
 ### Scan country distribution
 
@@ -216,7 +340,7 @@ df |>
 
 
 
-Column {data-width=650}
+Column {data-width=500}
 -----------------------------------------------------------------------
 
 
@@ -323,13 +447,124 @@ df |>
                      breaks = seq(0,5000,1000))+
   coord_cartesian(expand = T,
                   clip = "off")
+
+# TODO must summarize to total number of bottles
 ```
 
 
-Individual Country Reports
+TOP 5 COUNTRIES BREAKDOWN
 ===
 
-#### Coming soon!
+
+
+
+
+#### Context
+
+This page contains information of the countries that contributed to the most plastic bottles scanned.
+
+<!-- # TODO quantify the amount -->
+
+Column 
+-----------------------------------------------------------------------
+
+
+### top 20 brands in each of the 5 countries
+
+
+```{r, fig.width=14,fig.height=16}
+df |>
+  group_by(brand_name, scan_country) |>
+  summarise(total_bottles = sum(bottle_count),
+            .groups = "drop") |>
+  nest(data = -scan_country) |>
+  mutate(scan_country_total = map_dbl(data, ~ sum(.$total_bottles))) |>
+  arrange(desc(scan_country_total)) |>
+  mutate(scan_country= fct_inorder(scan_country)) |> 
+  unnest(cols = data) |> 
+  filter(scan_country_total > 5000) |> 
+  group_by(scan_country) |> 
+  slice_max(order_by = total_bottles, n = 20)-> countries_arranged_2
+
+countries_arranged_2$scan_country_rec <- countries_arranged_2$scan_country %>%
+  fct_recode(
+    "Angola" = "ao",
+    "Brazil" = "br",
+    "Canada" = "ca",
+    "Switzerland" = "ch",
+    "Spain" = "es",
+    "France" = "fr",
+    "Great Britain" = "gb",
+    "Kenya" = "ke",
+    "Malawi" = "mw",
+    "Mozambique" = "mz",
+    "Netherlands" = "nl",
+    "Rwanda" = "rw",
+    "Tanzania" = "tz",
+    "Uganda" = "ug",
+    "South Africa" = "za",
+    "Zambia" = "zm"
+  )
+
+   ggplot(countries_arranged_2,aes(total_bottles,fct_rev(fct_inorder(droplevels(brand_name))))) +
+    geom_col(fill = "aquamarine4") +
+    facet_wrap( ~ fct_infreq(scan_country_rec), scales = "free") +
+      labs(x = "", y = "") +
+  coord_cartesian(expand = F,
+                  clip = "off") +
+    theme(
+    strip.background = element_blank(),
+    strip.placement = "outside",
+    strip.text = element_text(colour = "black",
+                              hjust = 0,
+                              face = "bold",
+                              size = 10),
+    axis.text.y = element_text(size =10,
+                               face = "bold",
+                               color = "black"),
+    axis.text.x = element_text(size =8,
+                               face = "bold",
+                               angle = 45,
+                               vjust = 0.5)
+    )
+
+```
+
+
+Column 
+-----------------------------------------------------------------------
+
+### Top 5 country progressions 
+
+```{r, fig.width=12,fig.height=15}
+df |>
+  group_by(scan_country, batch) |>
+  summarise(total_bottles = sum(bottle_count),
+            .groups = "drop") |>
+  nest(data = -scan_country) |>
+  mutate(scan_country_total = map_dbl(data, ~ sum(.$total_bottles))) |>
+  arrange(desc(scan_country_total)) |>
+  mutate(scan_country= fct_inorder(scan_country)) |> 
+  unnest(cols = data) |> 
+  filter(scan_country_total > 5000) |>
+  ggplot(aes(batch,
+             total_bottles, 
+             group = scan_country,
+             colour = scan_country)) +
+  # geom_col() +
+  geom_line() +
+  geom_point() +
+  facet_wrap(~ scan_country,
+             ncol = 1,
+             scales = "free_y") +
+  theme(
+    strip.background = element_blank()
+  )
+
+
+```
+
+
 
 Predictive Analysis
 ===

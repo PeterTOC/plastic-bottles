@@ -18,10 +18,13 @@ knitr::opts_chunk$set(fig.align = 'center', collapse = TRUE, echo = FALSE, messa
 ```{r}
 # Packages
 library(tidyverse)
+library(gt)
+library(countrycode)
 
 # Parameters
   #input
 file_raw <- here::here("data/clean_waste_base_data.rds")
+file_flags <- here::here("data-raw/Country_Flags.csv")
 
 # theme update
 
@@ -314,10 +317,177 @@ leaflet(map) |>
 
 
 
+# batch progression faceted by scan countries
+
+```{r}
+library(gghighlight)
+
+df |>
+  group_by(scan_country, batch) |>
+  summarise(total_bottles = sum(bottle_count),
+            .groups = "drop") |>
+  nest(data = -scan_country) |>
+  mutate(scan_country_total = map_dbl(data, ~ sum(.$total_bottles))) |>
+  unnest(cols = data) |> 
+  ggplot(aes(batch,
+             total_bottles, 
+             group = scan_country,
+             colour = scan_country)) +
+  # geom_col() +
+  geom_line() +
+  geom_point() +
+  gghighlight(scan_country_total > 5000) +
+  # facet_wrap(~ scan_country,
+  #            ncol = 2,
+  #            scales = "free_y")+
+  theme(
+    strip.background = element_blank()
+  )
 
 
 
 
+```
+
+
+
+```{r}
+df |>
+  group_by(scan_country, batch) |>
+  summarise(total_bottles = sum(bottle_count),
+            .groups = "drop") |>
+  nest(data = -scan_country) |>
+  mutate(scan_country_total = map_dbl(data, ~ sum(.$total_bottles))) |>
+  arrange(desc(scan_country_total)) |>
+  mutate(scan_country= fct_inorder(scan_country)) |> 
+  unnest(cols = data) |> 
+  filter(scan_country_total > 5000) |>
+  ggplot(aes(batch,
+             total_bottles, 
+             group = scan_country,
+             colour = scan_country)) +
+  # geom_col() +
+  geom_line() +
+  geom_point() +
+  facet_wrap(~ scan_country,
+             ncol = 1,
+             scales = "free_y")+
+  theme(
+    strip.background = element_blank()
+  )
+
+  
+```
+
+# Table of values
+
+```{r}
+
+
+flags <- read_csv(file_flags) |> 
+  mutate(Code = as_factor(str_to_lower(countrycode(sourcevar = Country, origin = "country.name", destination = "iso2c", warn = FALSE)))) |> 
+  select(Code,
+         flag_URL = ImageURL)
+
+
+# df <- df |> 
+#   left_join(flags, by = c("scan_country"="Code"))
+
+df |>
+  group_by(scan_country, batch) |>
+  summarise(total_bottles = sum(bottle_count),
+            .groups = "drop") |>
+  nest(data = -scan_country) |>
+  mutate(scan_country_total = map_dbl(data, ~ sum(.$total_bottles))) |>
+  arrange(desc(scan_country_total)) |>
+  mutate(scan_country= fct_inorder(scan_country)) |> 
+  unnest(cols = data) -> table
+
+table$scan_country_rec <- table$scan_country %>%
+  fct_recode(
+    "Angola" = "ao",
+    "Brazil" = "br",
+    "Canada" = "ca",
+    "Switzerland" = "ch",
+    "Spain" = "es",
+    "France" = "fr",
+    "Great Britain" = "gb",
+    "Kenya" = "ke",
+    "Malawi" = "mw",
+    "Mozambique" = "mz",
+    "Netherlands" = "nl",
+    "Rwanda" = "rw",
+    "Tanzania" = "tz",
+    "Uganda" = "ug",
+    "South Africa" = "za",
+    "Zambia" = "zm"
+  )
+
+ table |> 
+  left_join(flags, by = c("scan_country" = "Code")) |>
+  nest(data = -scan_country_rec) |>
+  mutate(last_change = map_dbl(data, ~ . |>  # HACK how to map a piping function
+    mutate(change = c(0, diff(total_bottles))) |>
+    slice_tail(n = 1) |>
+    pull(change)),
+    last_month_rec = map_dbl(data, ~. |> 
+                               slice_tail(n = 1) |> 
+                               pull(total_bottles))) |>
+  unnest() |>
+  distinct(flag_URL,
+           scan_country,
+           scan_country_rec, 
+           last_month_rec,
+           last_change,
+           scan_country_total) |> 
+  select(flag_URL,
+         scan_country_rec, 
+           last_month_rec,
+           last_change,
+           scan_country_total) |> 
+  gt() |> 
+  cols_label(flag_URL = "",
+             scan_country_rec = md("**Country**"),
+             last_month_rec = md("**Latest Count**"),
+             last_change = md("**Difference<br>from previous<br>month**"),
+             scan_country_total = md("**Total bottles<br>scanned**"))|> 
+    gt::text_transform(
+    #Apply a function to a column
+    locations = cells_body(c(flag_URL)),
+    fn = function(x) {
+      #Return an image of set dimensions
+      web_image(
+        url = x,
+        height = 12
+      )
+    }) |> 
+  cols_width(c(flag_URL) ~ px(30)) |> 
+   tab_header(title = md("**Summary Table**")) |> 
+   opt_align_table_header(align = "left") |> 
+   tab_style(
+     locations = cells_title(groups = "title"),
+     style = list(
+       cell_text(weight = "bold",
+                 size = 24)
+     )
+   ) |> 
+   fmt_number(columns = 3:5,
+              sep_mark = ",",
+              decimals = 0) |> 
+  data_color(
+    columns = 5,
+    colors = scales::col_numeric(
+      palette = as.character(paletteer::paletteer_d(palette = "ggsci::red_material")),
+      domain = NULL
+    )
+  )
+  
+
+
+
+
+
+```
 
 
 
