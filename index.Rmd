@@ -37,6 +37,7 @@ library(sp)
 library(bslib)
 library(gt)
 library(countrycode)
+library(plotly)
 
 # Parameters
   #input
@@ -245,8 +246,9 @@ leaflet(map) |>
 
 ### Top 5 brands scanned in each country 
 
+<div style='height:850px; overflow-y: scroll'>
 
-```{r, fig.width=9,fig.height=7}
+```{r}
 
 
 
@@ -256,6 +258,11 @@ df |>
     group_by(scan_country) |> mutate(scan_country=fct_reorder(scan_country, total, .desc = TRUE))|> 
     slice_max(order_by = total,n = 5) |> 
     arrange(total) -> countries_arranged
+
+
+  
+  
+  
 
 ## Recoding countries_arranged$scan_country into countries_arranged$scan_country_rec
 countries_arranged$scan_country_rec <- countries_arranged$scan_country %>%
@@ -280,52 +287,41 @@ countries_arranged$scan_country_rec <- countries_arranged$scan_country %>%
 
     # fct_reorder(df$brand_name,total, min, .desc = TRUE)
     # na.omit() |> 
-   ggplot(countries_arranged,aes(total, fct_inorder(droplevels(brand_name)))) +
+   brand_scan_country_matrix <-    ggplot(countries_arranged,aes(total, fct_inorder(droplevels(brand_name)))) +
     geom_col(fill = "aquamarine4") +
-    facet_wrap( ~ fct_rev(fct_inorder(scan_country_rec)), scales = "free") +
+    facet_wrap( ~ fct_rev(fct_inorder(scan_country_rec)), 
+                scales = "free",
+                shrink = TRUE,
+                nrow = 4,
+                ncol = 4) +
       labs(x = "", y = "") +
-  coord_cartesian(expand = F,
-                  clip = "off") +
+  # coord_cartesian(expand = F,
+  #                 clip = "off") +
     theme(
     strip.background = element_blank(),
     strip.placement = "outside",
     strip.text = element_text(colour = "black",
                               hjust = 0,
                               face = "bold",
-                              size = 10),
-    axis.text.y = element_text(size =10,
+                              size = 8),
+    axis.text.y = element_text(size = 8,
                                face = "bold",
                                color = "black"),
-    axis.text.x = element_text(size =8,
-                               face = "bold",
-                               angle = 45,
-                               vjust = 0.5)
+    axis.text.x = element_blank(),
+    axis.ticks.x = element_blank()
     )
+ggplotly(brand_scan_country_matrix, dynamicTicks = FALSE,
+         height = 1000, width = 1000,
+         tooltip = "total")
    
 
 ```
-
-
-### Scan country distribution
-
-```{r}
-df |> 
-  group_by(scan_country) |> 
-  summarise(total = sum(bottle_count)) |> 
-  arrange(total) |> 
-  ggplot(aes(total, fct_inorder(scan_country))) + 
-  geom_col(fill = "aquamarine4") +
-  geom_label(aes(label = total)) +
-      labs(x = "", y = "") +
-  coord_cartesian(expand = F,
-                  clip = "off")
-```
-
+</div>
 
 ### Manufacturer country distribution
 
 ```{r}
-df |> 
+manf_country_dist <- df |> 
   group_by(manufacturer_country) |> 
   summarise(total = sum(bottle_count)) |> 
   arrange(total) |> 
@@ -335,6 +331,7 @@ df |>
       labs(x = "", y = "") +
   coord_cartesian(expand = F,
                   clip = "off")
+ggplotly(manf_country_dist)
 ```
 
 
@@ -349,7 +346,7 @@ Column {data-width=500}
 
 
 ```{r, fig.width=11, fig.height=6}
-df |> 
+gen_batch_dist <- df |> 
   group_by(batch) |> 
   summarise(total_bottles = sum(bottle_count)) |> 
   ggplot(aes(batch,total_bottles)) +
@@ -373,6 +370,7 @@ df |>
     axis.ticks = element_blank(),
     axis.line = element_blank()
   )
+ggplotly(gen_batch_dist)
   # geom_label(aes(label = total_bottles))
 
 
@@ -382,41 +380,17 @@ df |>
 
 ### **Product category distribution**
 
-```{r, fig.width=13}
-df |> 
-  group_by(product_category) |> 
-  summarise(total = sum(bottle_count)) |> 
-  arrange(total) |> 
-  ggplot(aes(total,fct_inorder(product_category))) +
-  geom_col(fill = "aquamarine4") +
-      labs(x = "", y = "") +
-  geom_label(aes(label = total),
-             hjust = 0.5,
-             size = 7,
-             label.size = 1)+
-  coord_cartesian(expand = T,
-                  clip = "off") +
- 
-  scale_x_continuous(position = "top",
-                     labels = scales::comma) +
-  theme(
-    axis.text.y = element_text(size =22,
-                               lineheight = 4,
-                               hjust = 0.5,
-                               color = "black"),
-    axis.text.x = element_blank(),
-    axis.ticks = element_blank(),
-    axis.line = element_blank(),
-    axis.title = element_blank()
-  )
+```{r}
 
-```
 
-### **Plastic bottle capacities (in ml)**
+# df$amount_rec <- cut(df$amount,
+#   include.lowest = TRUE,
+#   right = FALSE,
+#   dig.lab = 4,
+#   breaks = c(0, 500, 1000, 2000, 5000, 20000)
+# )
 
-```{r, fig.width=10, echo=FALSE, fig.cap="ETL project, Author: Peter Boshe https://peterboshe.netlify.app/", out.width = '100%'}
-df |> 
-  filter(units == "ml") |>
+product_category_dist <- df |>
   mutate(amount = round(amount),
          amount_category = fct_inorder(case_when(
            amount < 500 ~ "less than 500",
@@ -426,30 +400,75 @@ df |>
            TRUE ~ "greater than 5000"
            ))
   ) |> 
-  mutate(amount_category = fct_relevel(amount_category, "greater than 5000", after = 4)) |> # HACK releveling default levels
-  count(amount_category) |> 
-  ggplot(aes(n, fct_rev(amount_category))) + # HACK flipping your levels with forcats
-  geom_col(fill = "aquamarine4") +
-  geom_label(aes(label = n),
-             size = 7,
-             label.size = 1) +
-      labs(x = "", y = "") +
+  mutate(amount_category = fct_relevel(amount_category, "greater than 5000", after = 4)) |>
+  nest(data = -product_category) |> 
+  mutate(total_bottles = map_dbl(data,~ sum(.$bottle_count))) |> 
+  arrange(desc(total_bottles)) |> 
+  mutate(product_category = fct_reorder(product_category, total_bottles)) |> 
+  unnest(cols = c(data)) |> 
+  ggplot(aes(total_bottles, product_category, fill = amount_category)) + 
+  geom_col()+
+  coord_cartesian(expand = T,
+                  clip = "off") +
+ 
+  scale_x_continuous(position = "top",
+                     labels = scales::comma) +
   theme(
-    axis.text.y = element_text(size =22,
-                               hjust = 0.5,
+    axis.text.y = element_text(size =10,
                                lineheight = 4,
+                               hjust = 0.5,
                                color = "black"),
     axis.text.x = element_blank(),
     axis.ticks = element_blank(),
-    axis.line = element_blank()
-  ) +
-  scale_x_continuous(position = "top",
-                     breaks = seq(0,5000,1000))+
-  coord_cartesian(expand = T,
-                  clip = "off")
+    axis.line = element_blank(),
+    axis.title = element_blank()
+  )
+ggplotly(product_category_dist)
 
-# TODO must summarize to total number of bottles
+
 ```
+
+<!-- ### **Plastic bottle capacities (in ml)** -->
+
+<!-- ```{r, fig.width=10, echo=FALSE, fig.cap="ETL project, Author: Peter Boshe https://peterboshe.netlify.app/", out.width = '100%'} -->
+<!-- df |>  -->
+<!--   filter(units == "ml") |> -->
+<!--   mutate(amount = round(amount), -->
+<!--          amount_category = fct_inorder(case_when( -->
+<!--            amount < 500 ~ "less than 500", -->
+<!--            amount >= 500 & amount < 1000 ~ "500-1000", -->
+<!--            amount >= 1000 & amount < 2000 ~ "1000-2000", -->
+<!--            amount >= 2000 & amount < 5000 ~ "2000-5000", -->
+<!--            TRUE ~ "greater than 5000" -->
+<!--            )) -->
+<!--   ) |>  -->
+<!--   mutate(amount_category = fct_relevel(amount_category, "greater than 5000", after = 4)) |> # HACK releveling default levels -->
+<!--   count(amount_category) |>  -->
+<!--   ggplot(aes(n, fct_rev(amount_category))) + # HACK flipping your levels with forcats -->
+<!--   geom_col(fill = "aquamarine4") + -->
+<!--   geom_label(aes(label = n), -->
+<!--              size = 7, -->
+<!--              label.size = 1) + -->
+<!--       labs(x = "", y = "") + -->
+<!--   theme( -->
+<!--     axis.text.y = element_text(size =22, -->
+<!--                                hjust = 0.5, -->
+<!--                                lineheight = 4, -->
+<!--                                color = "black"), -->
+<!--     axis.text.x = element_blank(), -->
+<!--     axis.ticks = element_blank(), -->
+<!--     axis.line = element_blank() -->
+<!--   ) + -->
+<!--   scale_x_continuous(position = "top", -->
+<!--                      breaks = seq(0,5000,1000))+ -->
+<!--   coord_cartesian(expand = T, -->
+<!--                   clip = "off") -->
+
+<!-- # TODO must summarize to total number of bottles -->
+<!-- ``` -->
+
+
+
 
 
 TOP 5 COUNTRIES BREAKDOWN
