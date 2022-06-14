@@ -83,25 +83,23 @@ ggplot(aes(bottle_count, fct_rev(fct_infreq(product_category)),  fill = amount_r
 
 ```
 
-- we have had to transform the bottle count variable by log base of 10 since the distribution is skewed
-- we have no zero counts due to our cleaning pipeline
-- we are goint to uses a regular poisson regression, as opposed to the zero inflated poisson (ZIP) version which is a mixed effect model
+-   we have had to transform the bottle count variable by log base of 10 since the distribution is skewed
+-   we have no zero counts due to our cleaning pipeline
+-   we are goint to uses a regular poisson regression, as opposed to the zero inflated poisson (ZIP) version which is a mixed effect model
 
 however let's review the definition of poisson distribution as per the oracle(wikipedia)
 
 Poisson distribution
 
-: In probability theory and statistics, the Poisson distribution is a discrete probability distribution that expresses the probability of a given number of events occurring in a fixed interval of time or space if these events occur with a known constant mean rate and independently of the time since the last event.
+:   In probability theory and statistics, the Poisson distribution is a discrete probability distribution that expresses the probability of a given number of events occurring in a fixed interval of time or space if these events occur with a known constant mean rate and independently of the time since the last event.
 
-
-Our data is of time series nature, I am not sure my previous decision to go with poisson distribution is justified. 
+Our data is of time series nature, I am not sure my previous decision to go with poisson distribution is justified.
 
 hmm... but then again `batch` is a categorical variable and can be treated as such
 
 **approach 1**
 
- we are going to first neglect the effect of the time series
- 
+we are going to first neglect the effect of the time series
 
 ## Data allocation
 
@@ -132,10 +130,9 @@ waste_folds <- vfold_cv(waste_train,v = 20)
 
 ```
 
+## feature engineering recipes
 
-## feature engineering recipes 
-
-- categorical data will need to be encoded for the poisson regression method
+-   categorical data will need to be encoded for the poisson regression method
 
 ```{r}
 
@@ -151,7 +148,6 @@ model_vars <- workflow_variables(outcomes = bottle_count,
                                  predictors = everything())  
 
 ```
-
 
 ## calling all models
 
@@ -238,6 +234,3 @@ BRRR::skrrrahh(44)
 grid_results |> show_best(metric = "rmse")
 
 ```
-
-
-

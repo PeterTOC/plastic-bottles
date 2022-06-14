@@ -1,0 +1,120 @@
+---
+author: "Peter Boshe"
+date: "2022-06-14"
+output: 
+  html_document:
+    theme: flatly
+params:
+  country: "tz"
+title: "Report for `r params$country`"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+```{r}
+# libraries
+library(tidyverse)
+library(glue)
+library(janitor)
+library(skimr)
+
+
+# parameters
+
+  # input file
+file_raw <- here::here("docs/data/clean_waste_base_data.rds")
+
+# set plot theme
+
+theme_set(theme_bw())
+```
+
+```{r}
+waste_df <- read_rds(file_raw)
+
+## Cutting waste_df$amount into waste_df$amount_rec
+waste_df$amount_rec <- cut(waste_df$amount,
+  include.lowest = TRUE,
+  right = FALSE,
+  dig.lab = 4,
+  breaks = c(0, 500, 1000, 2000, 5000, 20000)
+)
+
+waste_df <- waste_df |> 
+  filter(scan_country == params$country)
+
+
+```
+
+## Batch progression in the scanned amounts
+
+```{r}
+waste_df |> 
+  group_by(batch) |> 
+  summarise(total_bottles = sum(bottle_count)) |> 
+  ggplot(aes(batch,total_bottles)) +
+  geom_col(fill = "aquamarine4") +
+  geom_line(aes(group = 1)) +
+  geom_point()  +
+      labs(x = "", y = "") +
+  coord_cartesian(expand = T,
+                  clip = "off") +
+  scale_y_continuous(labels = scales::comma,
+                     breaks = seq(0,200000, 10000))+
+  geom_label(aes(label = total_bottles),
+             nudge_y = 5000,
+             label.size = 1,
+             size = 7) + 
+  theme(
+    axis.text.y = element_blank(),
+    axis.text.x = element_text(face = "bold",
+                               size = 13,
+                               vjust = 0.5),
+    axis.ticks = element_blank(),
+    axis.line = element_blank()
+  )
+```
+
+## The distribution of the reported counts
+
+```{r}
+# plot histogram
+
+waste_df |> 
+  ggplot(aes(bottle_count)) + 
+  geom_histogram(fill = "aquamarine4") +
+  scale_x_log10()
+```
+
+## Distribution of the product category and bottle count reported
+
+```{r}
+# bar plot of product category and bottlecount
+
+waste_df |>
+  nest(data = -product_category) |> 
+  mutate(total_bottles = map_dbl(data,~ sum(.$bottle_count))) |> 
+  arrange(desc(total_bottles)) |> 
+  mutate(product_category = fct_reorder(product_category, total_bottles)) |> 
+  unnest(cols = c(data)) |> 
+  ggplot(aes(total_bottles, product_category, fill = amount_rec)) + 
+  geom_col()
+```
+
+# Top 20 brands found
+
+```{r}
+waste_df |> 
+  group_by(brand_name) |> 
+  summarise(total_bottles = sum(bottle_count)) |> 
+  arrange(desc(total_bottles)) |> 
+  head(n = 20) |> 
+  mutate(brand_name = fct_reorder(brand_name, total_bottles)) |> 
+  ggplot(aes(total_bottles,brand_name)) +
+  geom_col(fill = "aquamarine4")
+
+
+
+```
