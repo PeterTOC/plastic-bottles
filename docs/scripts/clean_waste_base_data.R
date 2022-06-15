@@ -123,7 +123,7 @@ categorized_df <- combined_df |>
 
 
 skim(categorized_df)
-
+ # TODO cut the capacity amount variable in the beginning
 # TODO to find a scaleable way of recoding, probably get the month and year from filename directly
 
 ## Recoding categorized_df$batch into categorized_df$batch_rec

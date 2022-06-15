@@ -45,6 +45,8 @@ file_raw <- here::here("docs/data/clean_waste_base_data.rds")
 file_flags <- here::here("docs/data-raw/Country_Flags.csv")
 report <- here::here("docs/reports/waste_dashboard.Rmd")
 
+subpage_report <- here::here("subpage.Rmd")
+
   #output
 html_output <- here::here("docs/")
 
@@ -467,121 +469,163 @@ ggplotly(product_category_dist)
 <!-- # TODO must summarize to total number of bottles -->
 <!-- ``` -->
 
+```{r, render subpages, include= FALSE}
+# get all unique country names
+
+countries <- as.character(unique(df$scan_country))
+
+# create variable so store all the subpage outputs
+out = NULL
+
+# set knitr options ro allow duplicate labels (needed for the subpages)
+options(knitr.duplicate.label = 'allow')
+
+# create temporary environment which we use for knitting subpages.RMD
+subpage_env <- new.env()
+
+for (country in countries) {
+  # filter data for scan_countries
+  subpage_data <-   df |> 
+    filter(scan_country == country) 
+  
+  ## Cutting waste_df$amount into waste_df$amount_rec
+subpage_data$amount_rec <- cut(subpage_data$amount,
+  include.lowest = TRUE,
+  right = FALSE,
+  dig.lab = 4,
+  breaks = c(0, 500, 1000, 2000, 5000, 20000)
+)
+
+  # assign filtered data and country to subpage_env
+ assign("subpage_data", subpage_data, subpage_env)
+ assign("country", country, subpage_env)
+ 
+ subpage_report <- here::here("subpage.Rmd")
+  
+  # knit subpage.RMD using the subpage_env and add result to out vector
+ out = c(out, knitr::knit_child(subpage_report), envir = subpage_env)
+  
+}
 
 
-
-
-TOP 5 COUNTRIES BREAKDOWN
-===
-
-
-
-
-
-#### Context
-
-This page contains information of the countries that contributed to the most plastic bottles scanned.
-
-<!-- # TODO quantify the amount -->
-
-Column 
------------------------------------------------------------------------
-
-
-### top 20 brands in each of the 5 countries
-
-
-```{r, fig.width=14,fig.height=16}
-df |>
-  group_by(brand_name, scan_country) |>
-  summarise(total_bottles = sum(bottle_count),
-            .groups = "drop") |>
-  nest(data = -scan_country) |>
-  mutate(scan_country_total = map_dbl(data, ~ sum(.$total_bottles))) |>
-  arrange(desc(scan_country_total)) |>
-  mutate(scan_country= fct_inorder(scan_country)) |> 
-  unnest(cols = data) |> 
-  filter(scan_country_total > 5000) |> 
-  group_by(scan_country) |> 
-  slice_max(order_by = total_bottles, n = 20)-> countries_arranged_2
-
-countries_arranged_2$scan_country_rec <- countries_arranged_2$scan_country %>%
-  fct_recode(
-    "Angola" = "ao",
-    "Brazil" = "br",
-    "Canada" = "ca",
-    "Switzerland" = "ch",
-    "Spain" = "es",
-    "France" = "fr",
-    "Great Britain" = "gb",
-    "Kenya" = "ke",
-    "Malawi" = "mw",
-    "Mozambique" = "mz",
-    "Netherlands" = "nl",
-    "Rwanda" = "rw",
-    "Tanzania" = "tz",
-    "Uganda" = "ug",
-    "South Africa" = "za",
-    "Zambia" = "zm"
-  )
-
-   ggplot(countries_arranged_2,aes(total_bottles,fct_rev(fct_inorder(droplevels(brand_name))))) +
-    geom_col(fill = "aquamarine4") +
-    facet_wrap( ~ fct_infreq(scan_country_rec), scales = "free") +
-      labs(x = "", y = "") +
-  coord_cartesian(expand = F,
-                  clip = "off") +
-    theme(
-    strip.background = element_blank(),
-    strip.placement = "outside",
-    strip.text = element_text(colour = "black",
-                              hjust = 0,
-                              face = "bold",
-                              size = 10),
-    axis.text.y = element_text(size =10,
-                               face = "bold",
-                               color = "black"),
-    axis.text.x = element_text(size =8,
-                               face = "bold",
-                               angle = 45,
-                               vjust = 0.5)
-    )
 
 ```
 
-
-Column 
------------------------------------------------------------------------
-
-### Top 5 country progressions 
-
-```{r, fig.width=12,fig.height=15}
-df |>
-  group_by(scan_country, batch) |>
-  summarise(total_bottles = sum(bottle_count),
-            .groups = "drop") |>
-  nest(data = -scan_country) |>
-  mutate(scan_country_total = map_dbl(data, ~ sum(.$total_bottles))) |>
-  arrange(desc(scan_country_total)) |>
-  mutate(scan_country= fct_inorder(scan_country)) |> 
-  unnest(cols = data) |> 
-  filter(scan_country_total > 5000) |>
-  ggplot(aes(batch,
-             total_bottles, 
-             group = scan_country,
-             colour = scan_country)) +
-  # geom_col() +
-  geom_line() +
-  geom_point() +
-  facet_wrap(~ scan_country,
-             ncol = 1,
-             scales = "free_y") +
-  theme(
-    strip.background = element_blank()
-  )
+`r paste(knitr::knit_child(text = out), collapse = '')`
 
 
-```
+
+<!-- TOP 5 COUNTRIES BREAKDOWN -->
+<!-- === -->
+
+
+
+
+
+<!-- #### Context -->
+
+<!-- This page contains information of the countries that contributed to the most plastic bottles scanned. -->
+
+<!-- <!-- # TODO quantify the amount --> -->
+
+<!-- Column  -->
+<!-- ----------------------------------------------------------------------- -->
+
+
+<!-- ### top 20 brands in each of the 5 countries -->
+
+
+<!-- ```{r, fig.width=14,fig.height=16} -->
+<!-- df |> -->
+<!--   group_by(brand_name, scan_country) |> -->
+<!--   summarise(total_bottles = sum(bottle_count), -->
+<!--             .groups = "drop") |> -->
+<!--   nest(data = -scan_country) |> -->
+<!--   mutate(scan_country_total = map_dbl(data, ~ sum(.$total_bottles))) |> -->
+<!--   arrange(desc(scan_country_total)) |> -->
+<!--   mutate(scan_country= fct_inorder(scan_country)) |>  -->
+<!--   unnest(cols = data) |>  -->
+<!--   filter(scan_country_total > 5000) |>  -->
+<!--   group_by(scan_country) |>  -->
+<!--   slice_max(order_by = total_bottles, n = 20)-> countries_arranged_2 -->
+
+<!-- countries_arranged_2$scan_country_rec <- countries_arranged_2$scan_country %>% -->
+<!--   fct_recode( -->
+<!--     "Angola" = "ao", -->
+<!--     "Brazil" = "br", -->
+<!--     "Canada" = "ca", -->
+<!--     "Switzerland" = "ch", -->
+<!--     "Spain" = "es", -->
+<!--     "France" = "fr", -->
+<!--     "Great Britain" = "gb", -->
+<!--     "Kenya" = "ke", -->
+<!--     "Malawi" = "mw", -->
+<!--     "Mozambique" = "mz", -->
+<!--     "Netherlands" = "nl", -->
+<!--     "Rwanda" = "rw", -->
+<!--     "Tanzania" = "tz", -->
+<!--     "Uganda" = "ug", -->
+<!--     "South Africa" = "za", -->
+<!--     "Zambia" = "zm" -->
+<!--   ) -->
+
+<!--    ggplot(countries_arranged_2,aes(total_bottles,fct_rev(fct_inorder(droplevels(brand_name))))) + -->
+<!--     geom_col(fill = "aquamarine4") + -->
+<!--     facet_wrap( ~ fct_infreq(scan_country_rec), scales = "free") + -->
+<!--       labs(x = "", y = "") + -->
+<!--   coord_cartesian(expand = F, -->
+<!--                   clip = "off") + -->
+<!--     theme( -->
+<!--     strip.background = element_blank(), -->
+<!--     strip.placement = "outside", -->
+<!--     strip.text = element_text(colour = "black", -->
+<!--                               hjust = 0, -->
+<!--                               face = "bold", -->
+<!--                               size = 10), -->
+<!--     axis.text.y = element_text(size =10, -->
+<!--                                face = "bold", -->
+<!--                                color = "black"), -->
+<!--     axis.text.x = element_text(size =8, -->
+<!--                                face = "bold", -->
+<!--                                angle = 45, -->
+<!--                                vjust = 0.5) -->
+<!--     ) -->
+
+<!-- ``` -->
+
+
+<!-- Column  -->
+<!-- ----------------------------------------------------------------------- -->
+
+<!-- ### Top 5 country progressions  -->
+
+<!-- ```{r, fig.width=12,fig.height=15} -->
+<!-- df |> -->
+<!--   group_by(scan_country, batch) |> -->
+<!--   summarise(total_bottles = sum(bottle_count), -->
+<!--             .groups = "drop") |> -->
+<!--   nest(data = -scan_country) |> -->
+<!--   mutate(scan_country_total = map_dbl(data, ~ sum(.$total_bottles))) |> -->
+<!--   arrange(desc(scan_country_total)) |> -->
+<!--   mutate(scan_country= fct_inorder(scan_country)) |>  -->
+<!--   unnest(cols = data) |>  -->
+<!--   filter(scan_country_total > 5000) |> -->
+<!--   ggplot(aes(batch, -->
+<!--              total_bottles,  -->
+<!--              group = scan_country, -->
+<!--              colour = scan_country)) + -->
+<!--   # geom_col() + -->
+<!--   geom_line() + -->
+<!--   geom_point() + -->
+<!--   facet_wrap(~ scan_country, -->
+<!--              ncol = 1, -->
+<!--              scales = "free_y") + -->
+<!--   theme( -->
+<!--     strip.background = element_blank() -->
+<!--   ) -->
+
+
+<!-- ``` -->
 
 
 
