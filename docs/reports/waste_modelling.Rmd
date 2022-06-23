@@ -231,6 +231,6 @@ BRRR::skrrrahh(44)
 
 
 # function does not work
-grid_results |> show_best(metric = "rmse")
+# grid_results |> show_best(metric = "rmse")
 
 ```

@@ -1,0 +1,168 @@
+---
+title: "AutoML with h2o"
+author: "Peter Boshe"
+date: "2022-06-18"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## load libraries
+
+```{r}
+# libraries
+library(tidymodels)
+library(tidyverse)
+
+
+# parameters
+file_raw <- here::here("docs/data/clean_waste_base_data.rds")
+
+```
+
+## load data & clean
+
+```{r}
+waste_df <- read_rds(file_raw)
+
+## Cutting waste_df$amount into waste_df$amount_rec
+waste_df$amount_rec <- cut(waste_df$amount,
+  include.lowest = TRUE,
+  right = FALSE,
+  dig.lab = 4,
+  breaks = c(0, 500, 1000, 2000, 5000, 20000)
+)
+```
+
+
+## Data allocation
+
+```{r}
+waste_df <- waste_df |>  
+  mutate(batch = as.numeric(batch)) |> 
+  arrange(batch) %>% 
+  mutate(.row = row_number()) # to simplify indexing
+
+
+
+# inspect the proportion of the split if we split by  batch
+split_prop <- (last(which(waste_df$batch <= 13))) / nrow(waste_df)
+
+indices <-
+  list(analysis   = waste_df$.row[waste_df$batch <= 13], 
+       assessment = waste_df$.row[waste_df$batch >  13]
+  )
+
+waste_split <- make_splits(indices, waste_df %>% select(-.row))
+waste_train <- training(waste_split)
+waste_test <- testing(waste_split)
+
+# folds for cross validation
+
+waste_folds <- vfold_cv(waste_train,v = 20)
+
+
+```
+
+
+<!-- ## preprocessing -->
+
+<!-- ```{r} -->
+<!-- waste_rec <- recipe(bottle_count ~ batch + product_category + brand_name + manufacturer_country + scan_country + amount + units + amount_rec, data = waste_train) |>  -->
+<!--   step_novel(all_nominal_predictors()) |>  -->
+<!--   step_dummy(all_nominal_predictors()) |>  -->
+<!--   step_nzv(all_predictors()) |>  -->
+<!--   step_normalize(all_numeric_predictors()) -->
+<!-- ``` -->
+
+
+
+## export data to h2o
+
+```{r}
+# initialize h2o
+
+library(h2o)
+h2o.init()
+#change the dataframes into h2o objects
+df <- as.h2o(waste_df)
+test <- as.h2o(waste_test)
+train <- as.h2o(waste_train)
+#to get a validation data object
+splits <- h2o.splitFrame(train, ratios = 0.8, seed = 1)
+new_train <- splits[[1]]
+new_val <- splits[[2]]
+```
+## inspect data
+
+```{r}
+h2o.describe(df)
+```
+
+## model 1
+
+```{r}
+aml <- h2o.automl(y = "bottle_count", 
+                  training_frame = train,
+                  leaderboard_frame = test,
+                  max_runtime_secs = 60,
+                  seed = 1,
+                  project_name = "waste_train_test_lb_knit")
+```
+
+## model 2
+
+```{r}
+aml_val <- h2o.automl(y = "bottle_count", 
+                  training_frame = new_train,
+                  validation_frame = new_val,
+                  max_runtime_secs = 60,
+                  seed = 1,
+                  project_name = "waste_train_val_knit")
+```
+
+
+## model 1 performance
+
+```{r}
+print(aml@leaderboard)
+```
+
+
+
+## model 2 performance
+
+```{r}
+print(aml_val@leaderboard)
+```
+
+
+
+## predictions using model 2
+
+```{r}
+pred <- h2o.predict(aml_val@leader, test)
+```
+
+- we got an error for the factors that were in the test set but not the training set
+
+
+## performance on test set
+
+```{r}
+perf <- h2o.performance(aml_val@leader, test)
+perf
+```
+
+
+
+
+
+
+
+
+
+
+

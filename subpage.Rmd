@@ -55,7 +55,8 @@ ind_produc_cat <- subpage_data |>
   mutate(product_category = fct_reorder(product_category, total_bottles)) |> 
   unnest(cols = c(data)) |> 
   ggplot(aes(total_bottles, product_category, fill = amount_rec)) + 
-  geom_col()
+  geom_col() +
+  scale_fill_manual(values = c("aquamarine4", "#E07A36", "#6592D6", "#6669CC", "#992E5C"))
 ggplotly(ind_produc_cat)
 ```
 

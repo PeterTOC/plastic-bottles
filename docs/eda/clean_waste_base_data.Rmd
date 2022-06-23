@@ -20,11 +20,12 @@ knitr::opts_chunk$set(fig.align = 'center', collapse = TRUE, echo = FALSE, messa
 library(tidyverse)
 library(gt)
 library(countrycode)
+library(plotly)
 
 # Parameters
   #input
-file_raw <- here::here("data/clean_waste_base_data.rds")
-file_flags <- here::here("data-raw/Country_Flags.csv")
+file_raw <- here::here("docs/data/clean_waste_base_data.rds")
+file_flags <- here::here("docs/data-raw/Country_Flags.csv")
 
 # theme update
 
@@ -210,8 +211,37 @@ df |>
   geom_boxplot() +
   facet_wrap( ~ year)
 
-
 ```
+
+# investigating outliers
+
+```{r}
+outliers <- df |> 
+  nest(data = -c(batch,brand_name, scan_country)) |> 
+  mutate(total_bottles = map_dbl(data, ~ sum(.$bottle_count))) |> 
+  unnest(cols = c(data)) |> 
+  ggplot(aes(batch, total_bottles)) +
+  geom_jitter(aes(fill = product_category,
+                  shape = scan_country,
+                  group = scan_country,
+                  size = bottle_count),
+              alpha = 0.4,
+              width = 0.8) +
+  geom_boxplot(alpha = 0.5,
+               outlier.shape = NA,
+               outlier.alpha = 0.1,
+               size = 2)
+ggplotly(outliers,
+         tooltip = c("size","y", "fill", "shape"))
+
+# TODO add median line
+```
+
+
+
+
+
+
 
 - distribution of amounts
 

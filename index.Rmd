@@ -326,14 +326,28 @@ ggplotly(brand_scan_country_matrix, dynamicTicks = FALSE,
 manf_country_dist <- df |> 
   group_by(manufacturer_country) |> 
   summarise(total = sum(bottle_count)) |> 
-  arrange(total) |> 
-  ggplot(aes(total, fct_inorder(manufacturer_country))) + 
+  # arrange(total) |> 
+  slice_max(order_by = total, n = 20) |> 
+  mutate(manufacturer_country = countrycode(str_to_upper(manufacturer_country),
+                                            origin = "iso2c",
+                                            destination = "country.name",
+                                            custom_match = c("UK" = "United Kingdom"))) |>
+  ggplot(aes(total, fct_rev(fct_inorder(manufacturer_country)))) + 
   geom_col(fill = "aquamarine4") +
-  geom_label(aes(label = total)) +
       labs(x = "", y = "") +
   coord_cartesian(expand = F,
-                  clip = "off")
-ggplotly(manf_country_dist)
+                  clip = "off") +
+  theme(
+        axis.text.x = element_blank(),
+    axis.ticks = element_blank(),
+    axis.line = element_blank(),
+    axis.title = element_blank()
+  )
+ 
+ggplotly(manf_country_dist,
+         tooltip = c("x"))
+
+  
 ```
 
 
@@ -415,6 +429,7 @@ product_category_dist <- df |>
  
   scale_x_continuous(position = "top",
                      labels = scales::comma) +
+  scale_fill_manual(values = c("aquamarine4", "#E07A36", "#6592D6", "#6669CC", "#992E5C")) +
   theme(
     axis.text.y = element_text(size =10,
                                lineheight = 4,
@@ -470,9 +485,16 @@ ggplotly(product_category_dist)
 <!-- ``` -->
 
 ```{r, render subpages, include= FALSE}
-# get all unique country names
 
-countries <- as.character(unique(df$scan_country))
+# recode countries
+df_recoded <- df |> 
+  mutate(scan_country = countrycode(str_to_upper(scan_country),
+                                    origin = "iso2c", 
+                                    destination = "country.name"))
+
+
+# get all unique country names
+countries <- as.character(unique(df_recoded$scan_country))
 
 # create variable so store all the subpage outputs
 out = NULL
@@ -485,8 +507,17 @@ subpage_env <- new.env()
 
 for (country in countries) {
   # filter data for scan_countries
-  subpage_data <-   df |> 
+  subpage_data <-   df_recoded |> 
     filter(scan_country == country) 
+  # mutate(amount = round(amount),
+  #        amount_rec = fct_inorder(case_when(
+  #          amount < 500 ~ "less than 500",
+  #          amount >= 500 & amount < 1000 ~ "500-1000",
+  #          amount >= 1000 & amount < 2000 ~ "1000-2000",
+  #          amount >= 2000 & amount < 5000 ~ "2000-5000",
+  #          TRUE ~ "greater than 5000"
+  #          ))
+  # )
   
   ## Cutting waste_df$amount into waste_df$amount_rec
 subpage_data$amount_rec <- cut(subpage_data$amount,
@@ -495,6 +526,18 @@ subpage_data$amount_rec <- cut(subpage_data$amount,
   dig.lab = 4,
   breaks = c(0, 500, 1000, 2000, 5000, 20000)
 )
+
+ ## recode values
+
+## Recoding subpage_data$amount_rec into subpage_data$amount_rec_rec
+subpage_data$amount_rec <- subpage_data$amount_rec %>%
+  fct_recode(
+    "less than 500" = "[0,500)",
+    "500-1000" = "[500,1000)",
+    "1000-2000" = "[1000,2000)",
+    "2000-5000" = "[2000,5000)",
+    "greater than 5000" = "[5000,2e+04]"
+  )
 
   # assign filtered data and country to subpage_env
  assign("subpage_data", subpage_data, subpage_env)
