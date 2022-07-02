@@ -7,6 +7,10 @@ Column
 
 #### `r paste0(country, " report")`
 
+- The total amount of bottle scanned from `r paste0(country)` is `r sum(subpage_data$bottle_count)`
+- The brand that contributed to the most amount of bottles is `r subpage_data |> group_by(brand_name) |>summarise(total_bottles = sum(bottle_count)) |> arrange(desc(total_bottles)) |> head(n = 1) |> pull(brand_name) |> scales::comma()` contributing `r subpage_data |> group_by(brand_name) |>summarise(total_bottles = sum(bottle_count)) |> arrange(desc(total_bottles)) |> head(n = 1) |> pull(total_bottles)|> scales::comma()` bottles.
+- Which is 
+
 ### Batch progression in the scanned amounts
 
 ```{r}
@@ -56,8 +60,20 @@ ind_produc_cat <- subpage_data |>
   unnest(cols = c(data)) |> 
   ggplot(aes(total_bottles, product_category, fill = amount_rec)) + 
   geom_col() +
-  scale_fill_manual(values = c("aquamarine4", "#E07A36", "#6592D6", "#6669CC", "#992E5C"))
-ggplotly(ind_produc_cat)
+  scale_fill_manual(values = c("aquamarine4", "#E07A36", "#6592D6", "#6669CC", "#992E5C")) +
+  scale_x_continuous(labels = scales::comma,
+                     position = "top") +
+  theme(
+    axis.text.y = element_text(size =10,
+                               lineheight = 4,
+                               hjust = 0.5),
+    axis.title = element_blank(),
+    axis.line = element_blank(),
+    axis.ticks = element_blank(),
+    axis.text.x = element_blank(),
+  ) +
+  labs(fill = "bottle capacity")
+layout(ggplotly(ind_produc_cat), barmode = 'stack')
 ```
 
 

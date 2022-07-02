@@ -433,56 +433,18 @@ product_category_dist <- df |>
   theme(
     axis.text.y = element_text(size =10,
                                lineheight = 4,
-                               hjust = 0.5,
-                               color = "black"),
+                               hjust = 0.5),
     axis.text.x = element_blank(),
     axis.ticks = element_blank(),
     axis.line = element_blank(),
     axis.title = element_blank()
-  )
-ggplotly(product_category_dist)
+  ) +
+  labs(fill = "bottle capacity")
+layout(ggplotly(product_category_dist), barmode = 'stack')
 
 
 ```
 
-<!-- ### **Plastic bottle capacities (in ml)** -->
-
-<!-- ```{r, fig.width=10, echo=FALSE, fig.cap="ETL project, Author: Peter Boshe https://peterboshe.netlify.app/", out.width = '100%'} -->
-<!-- df |>  -->
-<!--   filter(units == "ml") |> -->
-<!--   mutate(amount = round(amount), -->
-<!--          amount_category = fct_inorder(case_when( -->
-<!--            amount < 500 ~ "less than 500", -->
-<!--            amount >= 500 & amount < 1000 ~ "500-1000", -->
-<!--            amount >= 1000 & amount < 2000 ~ "1000-2000", -->
-<!--            amount >= 2000 & amount < 5000 ~ "2000-5000", -->
-<!--            TRUE ~ "greater than 5000" -->
-<!--            )) -->
-<!--   ) |>  -->
-<!--   mutate(amount_category = fct_relevel(amount_category, "greater than 5000", after = 4)) |> # HACK releveling default levels -->
-<!--   count(amount_category) |>  -->
-<!--   ggplot(aes(n, fct_rev(amount_category))) + # HACK flipping your levels with forcats -->
-<!--   geom_col(fill = "aquamarine4") + -->
-<!--   geom_label(aes(label = n), -->
-<!--              size = 7, -->
-<!--              label.size = 1) + -->
-<!--       labs(x = "", y = "") + -->
-<!--   theme( -->
-<!--     axis.text.y = element_text(size =22, -->
-<!--                                hjust = 0.5, -->
-<!--                                lineheight = 4, -->
-<!--                                color = "black"), -->
-<!--     axis.text.x = element_blank(), -->
-<!--     axis.ticks = element_blank(), -->
-<!--     axis.line = element_blank() -->
-<!--   ) + -->
-<!--   scale_x_continuous(position = "top", -->
-<!--                      breaks = seq(0,5000,1000))+ -->
-<!--   coord_cartesian(expand = T, -->
-<!--                   clip = "off") -->
-
-<!-- # TODO must summarize to total number of bottles -->
-<!-- ``` -->
 
 ```{r, render subpages, include= FALSE}
 
